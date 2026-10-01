@@ -2,7 +2,7 @@
 
 A focused technical prototype: **one structured ballet correction taxonomy powering three input modes** — voice questions, uploaded video and live camera. All three resolve to the **same correction records**.
 
-> **Status: Phase 1 (foundation).** Monorepo, schema, seed, API, classroom + curriculum UI. Voice, video and camera screens are honest placeholders until their phases land. Nothing is mocked.
+> **Status: Phase 2 implemented.** Voice streaming, deterministic terminology normalization, typed search and hybrid retrieval share the existing correction taxonomy. Video and camera remain placeholders. Real microphone transcription still needs verification with a Deepgram key. See [Phase 2 verification](docs/phase2-verification.md).
 
 ## What this demo proves (and what it doesn't)
 
@@ -47,9 +47,30 @@ Local Postgres alternative (Docker): `docker run -d -p 5432:5432 -e POSTGRES_PAS
 4. TLS is automatic for non-local hosts. Optionally set `DATABASE_SSL_CA` to the project CA to verify the certificate.
 5. RLS is enabled with no policies: the anon key can read nothing. Only the API (server credentials) reads the DB.
 
-### Deepgram setup (Phase 2)
+### Voice and retrieval setup (Phase 2)
 
-Create an API key at console.deepgram.com and set `DEEPGRAM_API_KEY` in the **API** environment only. Not used yet.
+Set `DEEPGRAM_API_KEY` in the **API** environment only. Open `/voice`, allow microphone access, and speak in English, German or French. HTTPS (or localhost) is required for microphone access. “Type instead” uses `POST /search` and works without Deepgram.
+
+FTS is enabled without a model. Optional E5 embeddings:
+
+```bash
+EMBEDDING_ALLOW_DOWNLOAD=true pnpm db:embed
+# Set EMBEDDING_ENABLED=true in apps/api/.env, then restart the API.
+# Re-running db:embed only processes NULL embeddings.
+pnpm --filter @mg/api embedding:measure
+```
+
+API requests only load an already cached model; model downloads are explicit CLI work. `EMBEDDING_ALLOW_DOWNLOAD=true` can also be used with `embedding:measure`. Inference uses q8 multilingual-e5-small with 384 dimensions, E5 prefixes, mean pooling and L2 normalization. Model failure degrades to FTS. `SEARCH_DEBUG=true` exposes per-result ranks; leave it false normally.
+
+**Memory:** a real local q8 query reached ~620 MiB RSS on macOS ARM64. This is not a Render Linux measurement and does not establish free-tier suitability. Embeddings therefore default to **disabled**. Keep FTS on Render free until a target-host measurement supports local inference, or implement another `EmbeddingProvider` with the same corpus/query model identity. Never mix embedding spaces.
+
+For real database and E5 integration tests after migrations, seed and backfill:
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/goggles TEST_E5=true pnpm test
+```
+
+Use a disposable test database. Without `TEST_DATABASE_URL`, database tests are explicitly skipped; without `TEST_E5=true`, real-model tests are skipped.
 
 ## Scripts
 
@@ -65,7 +86,7 @@ Create an API key at console.deepgram.com and set `DEEPGRAM_API_KEY` in the **AP
 
 ## API
 
-`GET /health` → `{"status":"ok"}` · `GET /health/ready` · `GET /curriculum` · `GET /exercises/:slug`. Details in the architecture doc.
+`POST /search` · WebSocket `/voice` · `GET /health` → `{"status":"ok"}` · `GET /health/ready` · `GET /curriculum` · `GET /exercises/:slug`. Details in the architecture doc.
 
 ## Deployment (Phase 6)
 
@@ -88,7 +109,7 @@ Single-camera 2D landmarks cannot reliably judge hip turnout, rotation, weight p
 ## Roadmap
 
 1. ✅ Foundation
-2. Voice + Deepgram + hybrid retrieval (pgvector + tsvector, RRF)
+2. ✅ Voice + Deepgram adapter + hybrid retrieval (live STT verification requires credentials)
 3. Uploaded video + MediaPipe + detector engine + debounced events
 4. Live webcam on the same pose engine
 5. Admin CRUD + UI polish + latency/debug panel

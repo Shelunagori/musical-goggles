@@ -7,6 +7,7 @@ export default defineConfig({
     server: 'src/server.ts',
     migrate: 'scripts/migrate.ts',
     seed: 'scripts/seed.ts',
+    embed: 'scripts/embed.ts',
   },
   format: ['esm'],
   platform: 'node',

@@ -36,7 +36,14 @@ const EnvSchema = z.object({
 
   // --- Phase 2 (optional until then) ---
   DEEPGRAM_API_KEY: z.string().min(1).optional(),
-  EMBEDDING_MODEL: z.string().default('Xenova/multilingual-e5-small'),
+  EMBEDDING_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  SEARCH_DEBUG: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

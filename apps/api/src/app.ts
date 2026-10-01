@@ -6,6 +6,9 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify';
 import cors from '@fastify/cors';
+import { voiceRoutes } from './routes/voice';
+import { deepgramFactory, type SpeechFactory } from './voice/deepgram';
+import type { SearchService } from './search/service';
 import type { ApiErrorBody } from '@mg/shared';
 import { AppError, classifyDatabaseError } from './errors';
 import type { CurriculumRepository } from './curriculum/repository';
@@ -14,6 +17,8 @@ import { curriculumRoutes } from './routes/curriculum';
 
 export interface AppDeps {
   repo: CurriculumRepository;
+  search?: SearchService;
+  speechFactory?: SpeechFactory;
   corsOrigins: string[];
   logger?: FastifyServerOptions['logger'] | FastifyBaseLogger;
 }
@@ -109,6 +114,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     };
     void reply.code(404).send(body);
   });
+
+  if (deps.search)
+    await voiceRoutes(app, deps.search, deps.speechFactory ?? deepgramFactory(), deps.corsOrigins);
 
   healthRoutes(app, deps);
   curriculumRoutes(app, deps);

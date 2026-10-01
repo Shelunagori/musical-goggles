@@ -12,20 +12,26 @@
     "test": "vitest run",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "db:reset": "tsx scripts/reset.ts"
+    "db:reset": "tsx scripts/reset.ts",
+    "db:embed": "tsx scripts/embed.ts",
+    "embedding:measure": "tsx scripts/measure-embedding.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
+    "@fastify/websocket": "^11.3.1",
+    "@huggingface/transformers": "^4.3.0",
     "@mg/shared": "workspace:*",
     "@mg/taxonomy": "workspace:*",
     "fastify": "^5.12.5",
     "pg": "^8.23.1",
     "pino": "^10.3.1",
+    "ws": "^8.22.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
     "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.2",
     "pino-pretty": "^13.1.3",
     "tsup": "^8.5.1",
     "tsx": "^4.23.15",

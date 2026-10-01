@@ -1,3 +1,6 @@
+import { SearchService } from './search/service';
+import { E5Provider } from './search/embedding';
+import { deepgramFactory } from './voice/deepgram';
 import pino from 'pino';
 import { buildApp, buildLoggerOptions } from './app';
 import { createPool } from './db/pool';
@@ -24,6 +27,12 @@ async function main(): Promise<void> {
   const app = await buildApp({
     repo: new PgCurriculumRepository(pool),
     corsOrigins: env.CORS_ORIGINS,
+    search: new SearchService(
+      pool,
+      env.EMBEDDING_ENABLED ? new E5Provider() : undefined,
+      env.SEARCH_DEBUG,
+    ),
+    speechFactory: deepgramFactory(env.DEEPGRAM_API_KEY),
     logger,
   });
 

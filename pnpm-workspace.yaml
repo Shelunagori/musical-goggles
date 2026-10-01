@@ -4,6 +4,7 @@ packages:
 
 # Native/binary packages allowed to run install scripts.
 onlyBuiltDependencies:
+  - onnxruntime-node
   - esbuild
   - sharp
   - '@tailwindcss/oxide'

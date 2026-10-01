@@ -1,6 +1,6 @@
 # Architecture — musical-goggles AI Classroom
 
-> Status: **Phase 1 (foundation)**. Voice (Phase 2), uploaded video (Phase 3) and live camera (Phase 4) are designed here but not yet built.
+> Status: **Phase 2 implemented**. Voice and typed retrieval are implemented; real microphone STT verification requires a Deepgram key. Uploaded video (Phase 3) and live camera (Phase 4) remain unimplemented.
 
 ## The one rule
 
@@ -116,12 +116,12 @@ Changing an exercise's terms or aliases re-runs the trigger for its corrections,
 
 Indexes: GIN on `search_tsv`, HNSW (`vector_cosine_ops`) on `embedding`, FK btree indexes, partial index on detectable corrections.
 
-### Hybrid ranking (Phase 2 plan)
+### Hybrid ranking (Phase 2)
 
 1. Normalize transcript deterministically (lowercase, unaccent, alias table → canonical exercise, body-part synonyms incl. German, e.g. _Schultern → shoulders_).
 2. Full-text candidates: `websearch_to_tsquery` over both `simple` and `english` configs, ranked by `ts_rank_cd`.
 3. Semantic candidates: e5 query embedding, cosine distance via HNSW.
-4. Fuse with **Reciprocal Rank Fusion** (`score = Σ 1/(60 + rank)`), boost rows matching a detected exercise, return top N.
+4. Restrict both candidate lists to a confidently detected exercise; retry globally if the restricted merge is empty. Fuse with **Reciprocal Rank Fusion** (`score = Σ 1/(60 + rank)`), return up to five records from 30 candidates per source. Natural-language filler is removed and remaining terms are OR-ed for FTS recall; English stemming still runs in PostgreSQL.
 5. No LLM on the critical path. An optional LLM fallback may be added later only for low-confidence queries.
 
 ## API (Phase 1)
@@ -157,3 +157,24 @@ One structured JSON line per request: `request_id` (from a safe `x-request-id` h
 | `/health` DB-independent + `/health/ready`                   | Render restarts on failed health checks; a DB blip must not kill the API.                                                                    |
 | Curriculum fetched client-side                               | Render free tier cold starts (~30–60 s) would exceed Vercel function limits if fetched during SSR; the browser can show a "waking up" state. |
 | Forward-only SQL migration runner                            | No ORM; same files work with `supabase db push`.                                                                                             |
+
+## Phase 2 protocol and runtime
+
+`packages/shared/src/voice.ts` defines zod contracts. `POST /search` accepts `{ "query": "knees in during plie" }` (1–1000 characters), and returns the original/normalized query, detected exercise, real correction DTOs, mode and timings. Ranking details appear only with server-side `SEARCH_DEBUG=true`.
+
+WebSocket `/voice` has one recording per connection:
+
+- Client JSON: `start` with supported `mimeType`, `stop`, `ping`. Strict schemas reject unknown keys. Audio uses binary frames (maximum 256 KiB/frame), never base64 JSON. Ping receives a WebSocket protocol pong.
+- Server JSON: `ready`, `transcript` with `text` and `final`, `searching`, `results` with the same search response, `metrics`, `error` with a code and safe message.
+- Wait for `ready` before audio. Browser prefers WebM/Opus, then supported Ogg/Opus or MP4; MediaRecorder emits around 250 ms chunks. Containerized audio is auto-detected by Deepgram; no raw PCM encoding override is sent.
+- Stop drains the final recorder blob before `stop`. API sends Deepgram `CloseStream`, drains finalized speech and pending searches, then closes. Client unmount/retry/error stops all microphone tracks and closes the socket.
+- The direct Deepgram WebSocket API uses Nova-3, `language=multi`, interim results, 500 ms endpointing, utterance-end events, and ballet keyterms. API key stays in the Authorization header on the server-to-Deepgram connection.
+- Interim text is displayed only. Final segments accumulate until speech-final/utterance-end, a 1.5 s final-segment fallback, or stop. Segment timestamps and normalized utterance text suppress retransmissions/repeated finals within a recording.
+- Limits: 10 s Deepgram handshake, 30 s without a recognized utterance, 120 s recording session, 20 utterances/session, bounded WebSocket buffers. Origin checked against CORS allowlist. Missing keys, malformed messages, wrong state, disconnects, silence and failed searches produce explicit errors.
+- Timings: normalization includes reading taxonomy terms; search includes embedding and SQL/ranking. STT is final-utterance delivery delay since the latest audio chunk, **not** provider-internal recognition latency. Total adds this delivery delay to retrieval, excluding speaking duration. Typed requests use null STT timing. Logs contain numeric timings only, never transcript/audio payloads.
+
+Normalizer folds accents, punctuation, hyphens and case, then finds the longest whole-phrase match in current exercise names, French/German terms and `exercise_aliases`. Tied matches for different exercises do not filter. Canonical French terms replace matched terms; deterministic body/error vocabulary translates Schultern/Knie/Fersen and “knees in”/“heels coming up”. No extra taxonomy or LLM is introduced.
+
+`EmbeddingProvider` isolates model implementation. E5 loads lazily via Transformers.js, uses q8 weights, mean pooling, L2 normalization and `query: `/`passage: ` prefixes for all languages. Inference is serialized per provider. API never downloads weights and defaults to FTS. A failed local-model load is cached for that process; restart after populating its model cache. Semantic SQL only uses rows whose `embedding_model` matches the provider. Backfill writes only NULL rows whose `searchable_text` still equals the text embedded; the existing Phase 1 invalidation triggers remain authoritative.
+
+No schema changes were required. See [verification and memory observations](phase2-verification.md).
