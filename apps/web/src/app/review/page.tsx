@@ -9,6 +9,7 @@ export const metadata = {
     'A plain-language look inside the AI Ballet Classroom: tools, analysis, retrieval, privacy and honest limitations.',
 };
 const sections = [
+  ['demos', 'See it in action'],
   ['foundation', 'One curriculum'],
   ['retrieval', 'Voice & text'],
   ['movement', 'Movement analysis'],
@@ -102,12 +103,79 @@ export default function ReviewPage() {
               href={`#${id}`}
               className="rounded-lg px-3 py-2.5 text-xs text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
             >
-              <span className="mr-3 font-mono text-ink-faint">0{i + 1}</span>
+              <span className="mr-3 font-mono text-ink-faint">0{i}</span>
               {label}
             </a>
           ))}
         </nav>
         <div className="min-w-0 space-y-14 pb-8">
+          <ReviewSection
+            id="demos"
+            number="00"
+            title="The real product, in motion."
+            intro="Recorded in the actual application with real API calls. No reconstructed screens or invented results. These short, silent captures show the local demo; playback controls let you pause and look closer."
+          >
+            <article className="surface overflow-hidden">
+              <div className="space-y-3 p-5 sm:p-6">
+                <p className="eyebrow">Voice retrieval</p>
+                <h3 className="text-xl font-medium">From spoken words to a teaching cue.</h3>
+                <p className="text-sm leading-relaxed text-ink-muted">
+                  Prerecorded speech passes through browser audio capture and real Deepgram
+                  transcription. The final transcript retrieves actual Demi-plié corrections. This
+                  is automated audio input, not a live microphone demonstration.
+                </p>
+              </div>
+              <video
+                controls
+                muted
+                loop
+                playsInline
+                preload="none"
+                poster="/demo/voice-demo-poster.jpg"
+                aria-label="Voice retrieval recording using prerecorded speech and real Deepgram transcription"
+                className="block aspect-[36/25] w-full bg-stage"
+              >
+                <source src="/demo/voice-demo.mp4" type="video/mp4" />
+                <a href="/demo/voice-demo.mp4">Download the voice retrieval recording</a>
+              </video>
+              <p className="border-t border-line p-5 text-xs leading-relaxed text-ink-muted">
+                Audio → WebSocket → Deepgram → normalization → PostgreSQL retrieval → shared
+                correction records. This take uses full-text retrieval.
+              </p>
+            </article>
+            <article className="surface overflow-hidden">
+              <div className="space-y-3 p-5 sm:p-6">
+                <p className="eyebrow">Video analysis</p>
+                <h3 className="text-xl font-medium">Follow the points. Inspect the evidence.</h3>
+                <p className="text-sm leading-relaxed text-ink-muted">
+                  The supplied ballet clip runs through the actual local pose pipeline with
+                  Demi-plié selected manually. Analysis waiting time is shortened for this demo;
+                  detector outputs are unchanged. This take produced two knee-alignment events, both
+                  ending with tracking lost; only 50 of 370 frames were measurable. These are
+                  prototype signals, not a reliable technique judgment.
+                </p>
+                <p className="privacy-note">Video stays on this device.</p>
+              </div>
+              <video
+                controls
+                muted
+                loop
+                playsInline
+                preload="none"
+                poster="/demo/video-demo-poster.jpg"
+                aria-label="Local ballet video analysis recording with real pose tracking and results"
+                className="block aspect-[36/25] w-full bg-stage"
+              >
+                <source src="/demo/video-demo.mp4" type="video/mp4" />
+                <a href="/demo/video-demo.mp4">Download the video analysis recording</a>
+              </video>
+              <p className="border-t border-line p-5 text-xs leading-relaxed text-ink-muted">
+                Local video → MediaPipe landmarks → deterministic geometry → shared correction
+                taxonomy. The application does not classify the exercise or upload the source clip.
+                These published screen recordings are separate, intentionally shared demo assets.
+              </p>
+            </article>
+          </ReviewSection>
           <ReviewSection
             id="foundation"
             number="01"
@@ -201,8 +269,9 @@ export default function ReviewPage() {
               </p>
             </Disclosure>
             <p className="text-xs leading-relaxed text-ink-faint">
-              Deepgram needs a server-side key. Real microphone-to-Deepgram verification is still
-              pending. Type instead works without it.
+              Deepgram needs a server-side key. The recording verifies transcription with
+              prerecorded speech; physical microphone testing remains separate. Type instead works
+              without a key.
             </p>
           </ReviewSection>
           <ReviewSection
@@ -362,7 +431,8 @@ export default function ReviewPage() {
                 <ul className="mt-4 space-y-3 text-sm leading-relaxed text-ink-muted">
                   <li>Real PostgreSQL retrieval and curriculum editing</li>
                   <li>Shared taxonomy mapping and deterministic rule tests</li>
-                  <li>MediaPipe loading and inference on a blank diagnostic clip</li>
+                  <li>MediaPipe inference on a diagnostic clip and the supplied ballet video</li>
+                  <li>Prerecorded speech → real Deepgram transcription → curriculum results</li>
                   <li>Missing-key errors, origin checks and privacy checks</li>
                 </ul>
               </article>
@@ -370,7 +440,7 @@ export default function ReviewPage() {
                 <p className="eyebrow text-warn">Still requires verification</p>
                 <ul className="mt-4 space-y-3 text-sm leading-relaxed text-ink-muted">
                   <li>Real ballet movement accuracy and broader camera views</li>
-                  <li>Real microphone → Deepgram flow with credentials</li>
+                  <li>Physical microphone capture across browsers and devices</li>
                   <li>Real webcam capture on a device granting permission</li>
                   <li>End-to-end behavior on deployed HTTPS services</li>
                 </ul>
@@ -384,8 +454,8 @@ export default function ReviewPage() {
           <ReviewSection
             id="deployment"
             number="07"
-            title="Designed to travel. Not yet verified live."
-            intro="Deployment preparation targets Vercel for the frontend, Render free for the API, and Supabase for PostgreSQL. Preparation is not proof of a successful public deployment."
+            title="Public endpoints. Honest verification."
+            intro="The public frontend and API are linked below. Their availability does not establish end-to-end production behavior: these recordings were captured locally against the real services and seeded curriculum."
           >
             <div className="grid gap-3 sm:grid-cols-3">
               {[
@@ -397,7 +467,7 @@ export default function ReviewPage() {
                   <h3 className="text-lg font-medium">{host}</h3>
                   <p className="mt-2 text-xs text-ink-muted">{job}</p>
                   <span className="mt-4 inline-block text-[10px] font-medium tracking-widest text-warn uppercase">
-                    Target · unverified
+                    Deployment target
                   </span>
                 </div>
               ))}
@@ -409,6 +479,15 @@ export default function ReviewPage() {
               semantic search is active.
             </p>
             <div className="flex flex-wrap gap-3 border-t border-line pt-5">
+              <a href="https://musical-goggles-bice.vercel.app" className="button-primary">
+                Open public demo <ArrowIcon />
+              </a>
+              <a
+                href="https://musical-goggles-api.onrender.com/health"
+                className="button-secondary"
+              >
+                API health
+              </a>
               <Link href="/voice" className="button-primary">
                 Ask your first question <ArrowIcon />
               </Link>

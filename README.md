@@ -2,7 +2,23 @@
 
 A focused technical prototype: **one structured ballet correction taxonomy powering three input modes** — voice questions, uploaded video and live camera. All three resolve to the **same correction records**.
 
-> **Status: Phase 5 implemented.** Curriculum admin, consistent classroom navigation/states and accessible forms are available. Voice/typed retrieval, uploaded video and live camera still share one taxonomy. Real STT needs a Deepgram key; webcam/ballet movement validation remains outstanding. See [Phase 5 verification](docs/phase5-verification.md).
+> **Status:** Premium classroom UI and optional one-click demo admin are implemented. The recordings below use the real local application, real Deepgram transcription and real browser-side pose inference. They do not establish general ballet-assessment accuracy.
+
+## Demo
+
+[Open the classroom](https://musical-goggles-bice.vercel.app) · [Product review](https://musical-goggles-bice.vercel.app/review) · [API](https://musical-goggles-api.onrender.com) · [Capture notes](docs/demo-captures.md)
+
+### Voice retrieval
+
+![Real voice retrieval using prerecorded speech](apps/web/public/demo/voice-demo.gif)
+
+Prerecorded speech → real Deepgram transcription → terminology normalization → PostgreSQL full-text retrieval → shared correction cards. **Automated audio input, not a live microphone demonstration.** No transcript or result was mocked. [Watch the MP4](apps/web/public/demo/voice-demo.mp4).
+
+### Video analysis
+
+![Real local video pose analysis and detector timeline](apps/web/public/demo/video-demo.gif)
+
+Local video → MediaPipe pose → deterministic detector → shared correction taxonomy. The supplied clip produces two geometric events with Demi-plié selected manually; these are experimental signals, not validated ballet corrections. Analysis waiting time is compressed. **Video stays on this device during analysis.** These published screen recordings are intentionally shared demo assets. [Watch the MP4](apps/web/public/demo/video-demo.mp4).
 
 ## What this demo proves (and what it doesn't)
 
@@ -125,7 +141,7 @@ Navigation connects all modes and admin. Tab/Shift+Tab, Enter/Space, visible foc
 
 ## Deployment (Phase 6)
 
-Deployment preparation is available; **no live URLs or deployed search mode have been verified yet**. Follow the [deployment runbook](docs/deployment.md) for Supabase migrations/seed, Render free configuration, Vercel setup, every environment variable and the demo acceptance sequence. See [Phase 6 evidence and remaining actions](docs/phase6-verification.md).
+Public frontend and API links are listed above; the frontend responds and API liveness was checked. **Deployed end-to-end flows and deployed search mode remain unverified.** The recordings use the local application. Follow the [deployment runbook](docs/deployment.md) for Supabase migrations/seed, Render free configuration, Vercel setup, every environment variable and the demo acceptance sequence. See [Phase 6 evidence and remaining actions](docs/phase6-verification.md).
 
 The initial demo configuration is **FTS-only**. Local E5 remains disabled on Render free because the measured ~620 MiB RSS exceeds its documented 512 MB allocation. No hosted embedding provider is currently configured. The response/UI reports the actual retrieval mode.
 

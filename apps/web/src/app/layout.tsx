@@ -5,8 +5,8 @@ import { ClassroomNav } from '@/components/ClassroomNav';
 export const metadata: Metadata = {
   title: 'musical-goggles · AI Classroom',
   verification: {
-    google: "WYuMPsM9ozjO1kSUsj9MOlRgM6y2ejb3dljKKLAegls",
-  },  
+    google: 'WYuMPsM9ozjO1kSUsj9MOlRgM6y2ejb3dljKKLAegls',
+  },
   description:
     'One ballet correction taxonomy powering voice retrieval, uploaded-video and live-camera analysis (prototype).',
 };
