@@ -1,22 +1,11 @@
-import { PhasePlaceholder } from '@/components/PhasePlaceholder';
-
+import { PageHeader } from '@/components/PageHeader';
+import { VideoClassroom } from '@/components/VideoClassroom';
 export const metadata = { title: 'Analyze Video · musical-goggles' };
-
 export default function VideoPage() {
   return (
-    <PhasePlaceholder
-      eyebrow="Uploaded video"
-      title="Video analysis"
-      phase={3}
-      summary="Upload a clip and MediaPipe Pose runs locally in this browser. A small set of geometric detectors maps what it sees to the same correction records used by voice. The video never leaves your device."
-      pipeline={[
-        'Video file',
-        'MediaPipe Pose (browser)',
-        'Normalize pose',
-        'Detector rules',
-        'Debounced events',
-        'Correction records',
-      ]}
-    />
+    <main className="mx-auto max-w-6xl space-y-8 px-6 py-12">
+      <PageHeader eyebrow="Local video · geometric prototype" title="Video analysis" />
+      <VideoClassroom />
+    </main>
   );
 }

@@ -1,6 +1,6 @@
 # Architecture — musical-goggles AI Classroom
 
-> Status: **Phase 2 implemented**. Voice and typed retrieval are implemented; real microphone STT verification requires a Deepgram key. Uploaded video (Phase 3) and live camera (Phase 4) remain unimplemented.
+> Status: **Phase 3 implemented**. Voice/typed retrieval and uploaded-video analysis are implemented. Real microphone STT verification needs a key; real ballet footage validation remains outstanding. Live camera (Phase 4) is unimplemented.
 
 ## The one rule
 
@@ -178,3 +178,19 @@ Normalizer folds accents, punctuation, hyphens and case, then finds the longest 
 `EmbeddingProvider` isolates model implementation. E5 loads lazily via Transformers.js, uses q8 weights, mean pooling, L2 normalization and `query: `/`passage: ` prefixes for all languages. Inference is serialized per provider. API never downloads weights and defaults to FTS. A failed local-model load is cached for that process; restart after populating its model cache. Semantic SQL only uses rows whose `embedding_model` matches the provider. Backfill writes only NULL rows whose `searchable_text` still equals the text embedded; the existing Phase 1 invalidation triggers remain authoritative.
 
 No schema changes were required. See [verification and memory observations](phase2-verification.md).
+
+## Phase 3 browser processing
+
+The `/video` client loads the existing `GET /curriculum`, filters corrections through the pose engine's supported-rule registry, and lets the user select exercise context. It passes only correction IDs and detector configurations to the engine. Correction names, cues and instructions always come from the same DTOs served to voice retrieval. No CV database or new API route is needed.
+
+`video-analysis.ts` seeks a local blob-backed player at 100 ms media-time intervals, waits for decoded frames, resizes input to at most 960 pixels on its longest edge, and transfers one `ImageBitmap` at a time to `pose.worker.ts`. MediaPipe Tasks Vision 1.0.1 runs `PoseLandmarker.detectForVideo` in VIDEO mode with the version-1 Lite float16 model and CPU delegate. Inference stays off the main thread. The worker also owns the input-independent `PosePipeline`; Phase 4 can later replace the frame source without changing detectors or event filtering.
+
+MediaPipe image x/y coordinates are corrected for aspect ratio before torso normalization. Pure rule functions return side, rule, status, normalized measurement, minimum visibility and relevant landmark indices. Visibility is a tracking-quality measure, not a correction confidence score. Empty or multi-person frames produce unmeasurable results. A fixed frontal view is required.
+
+`PosePipeline` owns shoulder-baseline calibration and one temporal filter per correction/side. Candidate violations need the configured `min_duration_ms` and at least three sampled frames. Active events need 400 ms and three clear frames to clear. Missing/uncertain tracking or a >350 ms sample gap ends the observed interval as tracking-lost; it is never labeled recovery. Event starts retain the initial candidate timestamp; confirmed and end timestamps are separately represented. Cancellation/EOF close intervals at the last analyzed frame. Reset creates a new pipeline.
+
+The UI keeps sampled landmarks for replay overlays and event intervals for seeking/highlighting; it does not retain a growing event-history copy per frame. Model workers are terminated on completion, cancellation, error, file replacement and unmount. Blob URLs are revoked on replacement/unmount. Measurements and derived timelines remain in browser memory only.
+
+The current runtime includes usage telemetry. A CSP on the worker script response permits only same-origin assets and pinned model/WASM asset paths; other worker connections are blocked. This is scoped to script responses so the voice page's API/WebSocket connections are unaffected. The browser downloads runtime/model assets but no code path uploads media. Hosting must preserve these headers.
+
+See [Phase 3 verification](phase3-verification.md) for precise geometry, limitations and measured results.

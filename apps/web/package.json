@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
     "@mg/pose-engine": "workspace:*",
     "@mg/shared": "workspace:*",
     "@mg/taxonomy": "workspace:*",

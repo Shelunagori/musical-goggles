@@ -36,7 +36,7 @@ describe('basic geometry', () => {
   it('isVisible honours threshold and missing visibility', () => {
     expect(isVisible({ x: 0, y: 0, z: 0, visibility: 0.4 })).toBe(false);
     expect(isVisible({ x: 0, y: 0, z: 0, visibility: 0.6 })).toBe(true);
-    expect(isVisible({ x: 0, y: 0, z: 0 })).toBe(true);
+    expect(isVisible({ x: 0, y: 0, z: 0 })).toBe(false);
     expect(isVisible(undefined)).toBe(false);
   });
 });

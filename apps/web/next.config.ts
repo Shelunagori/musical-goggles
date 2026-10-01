@@ -8,6 +8,19 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // A worker gets CSP from its script response. Permit model assets but
+        // block MediaPipe 1.x telemetry and any other worker network destination.
+        // Ordinary script responses do not set the page document's CSP.
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "connect-src 'self' https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm/ https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/;",
+          },
+        ],
+      },
+      {
         source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },

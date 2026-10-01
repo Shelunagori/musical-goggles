@@ -2,7 +2,7 @@
 
 A focused technical prototype: **one structured ballet correction taxonomy powering three input modes** — voice questions, uploaded video and live camera. All three resolve to the **same correction records**.
 
-> **Status: Phase 2 implemented.** Voice streaming, deterministic terminology normalization, typed search and hybrid retrieval share the existing correction taxonomy. Video and camera remain placeholders. Real microphone transcription still needs verification with a Deepgram key. See [Phase 2 verification](docs/phase2-verification.md).
+> **Status: Phase 3 implemented.** Voice/typed retrieval and local uploaded-video analysis share one correction taxonomy. Live camera remains a placeholder. Geometric detectors still need validation on real ballet footage. See [Phase 3 verification](docs/phase3-verification.md).
 
 ## What this demo proves (and what it doesn't)
 
@@ -72,6 +72,16 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/goggles TEST_E5=
 
 Use a disposable test database. Without `TEST_DATABASE_URL`, database tests are explicitly skipped; without `TEST_E5=true`, real-model tests are skipped.
 
+## Local uploaded-video analysis (Phase 3)
+
+Open `/video`, choose Demi-plié or Port de bras, select a local file and start analysis. Use a single dancer, a fixed level camera facing the dancer, and clear views of the required joints. Port de bras needs an initial **1.5 seconds of still, relaxed shoulders** for calibration. MP4/H.264 and WebM depend on browser codec support; clips are limited to five minutes.
+
+The video stays in a browser blob URL. A worker downloads the pinned MediaPipe Tasks Vision runtime and Lite model, samples decoded frames at 10 Hz, then runs the shared pose engine. Nothing uploads the video or frames. Worker-response CSP allows model assets and blocks MediaPipe telemetry. Keep the configured `_next/static` response headers when hosting the app.
+
+Knee alignment and calibrated shoulder elevation are experimental 2D heuristics. Heel lift remains unavailable in the video engine; its existing taxonomy metadata is retained as a candidate, so the curriculum's metadata count of 3 is **not** a count of implemented video rules. The video selector only offers exercises with an implemented rule. No classifier, score or live webcam is included.
+
+A completed analysis shows sustained-event intervals; click one to seek the player. Low visibility and missing poses are not called “alignment OK”. Reset or select another file to discard local results. Offline/model-download failures appear as errors. See [detector assumptions and verification](docs/phase3-verification.md).
+
 ## Scripts
 
 | Command                                              | What                                                                                                                 |
@@ -110,7 +120,7 @@ Single-camera 2D landmarks cannot reliably judge hip turnout, rotation, weight p
 
 1. ✅ Foundation
 2. ✅ Voice + Deepgram adapter + hybrid retrieval (live STT verification requires credentials)
-3. Uploaded video + MediaPipe + detector engine + debounced events
+3. ✅ Uploaded video + browser MediaPipe + deterministic detectors and event intervals (real ballet validation outstanding)
 4. Live webcam on the same pose engine
 5. Admin CRUD + UI polish + latency/debug panel
 6. Vercel + Render + Supabase deployment, end-to-end verification

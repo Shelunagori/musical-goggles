@@ -32,7 +32,13 @@ export function isVisible(
   lm: Landmark | undefined,
   minVisibility = DEFAULT_MIN_VISIBILITY,
 ): lm is Landmark {
-  return lm !== undefined && (lm.visibility ?? 1) >= minVisibility;
+  return (
+    lm !== undefined &&
+    [lm.x, lm.y, lm.z].every(Number.isFinite) &&
+    Number.isFinite(lm.visibility) &&
+    (lm.visibility ?? 0) >= minVisibility &&
+    (lm.visibility ?? 0) <= 1
+  );
 }
 
 export interface NormalizedPose {

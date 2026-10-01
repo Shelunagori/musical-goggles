@@ -71,7 +71,11 @@ export default function ClassroomHome() {
               <p className="mt-3 text-lg text-ink-muted">{line}</p>
               <p className="mt-6 flex items-center justify-between text-sm font-semibold tracking-widest text-warn/90 uppercase">
                 <span>
-                  {phase === 2 ? 'Voice + typed search' : `Phase ${phase} · not built yet`}
+                  {phase === 2
+                    ? 'Voice + typed search'
+                    : phase === 3
+                      ? 'Local video analysis'
+                      : `Phase ${phase} · not built yet`}
                 </span>
                 <ArrowIcon className="text-ink-muted transition-transform group-hover:translate-x-1" />
               </p>
