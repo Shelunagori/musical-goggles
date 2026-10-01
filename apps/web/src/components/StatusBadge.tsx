@@ -16,7 +16,7 @@ export function StatusBadge({ state }: { state: string }) {
           : 'border-line text-ink-muted';
   return (
     <span
-      className={`inline-flex rounded-full border px-4 py-2 text-lg font-semibold capitalize ${tone}`}
+      className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${tone}`}
     >
       {state.replaceAll('_', ' ')}
     </span>

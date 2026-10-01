@@ -11,6 +11,7 @@ import { fetchJson, type ApiResult } from '@/lib/api';
 import { config } from '@/lib/config';
 import Link from 'next/link';
 import { supportsRule } from '@mg/pose-engine';
+import { Disclosure } from './Disclosure';
 import { StateMessage } from './StateMessage';
 
 const COLD_START_HINT_MS = 4_000;
@@ -23,6 +24,8 @@ type Load =
 export function CurriculumView() {
   const [load, setLoad] = useState<Load>({ status: 'loading', slow: false });
   const [attempt, setAttempt] = useState(0);
+  const [selectedId, setSelectedId] = useState('');
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -72,36 +75,79 @@ export function CurriculumView() {
     );
   }
 
+  const visible = exercises.filter((e) =>
+    [e.name, e.frenchTerm, e.germanTerm, ...e.aliases.map((a) => a.alias)].some((term) =>
+      term?.toLocaleLowerCase().includes(filter.toLocaleLowerCase()),
+    ),
+  );
+  const selected = visible.find((e) => e.id === selectedId) ?? visible[0];
+  const implemented = exercises
+    .flatMap((e) => e.corrections)
+    .filter((c) => c.detector && supportsRule(c.detector.rule)).length;
   return (
-    <div className="flex flex-col gap-10">
-      <section className="grid gap-5 lg:grid-cols-[1fr_auto]">
-        <div className="rounded-2xl border border-warn/40 bg-panel p-6">
-          <p className="text-sm font-bold tracking-[0.3em] text-warn uppercase">{dataset.label}</p>
-          <p className="mt-2 text-lg text-ink-muted">{dataset.notice}</p>
-        </div>
-        <div className="rounded-2xl border border-line bg-panel p-6 lg:min-w-96">
-          <p className="text-sm font-semibold tracking-[0.2em] text-ink-faint uppercase">
-            Corrections with detector metadata
-          </p>
-          <p className="mt-2 font-mono text-5xl font-semibold">
-            {coverage.cameraDetectable} <span className="text-ink-faint">/ {coverage.total}</span>
-          </p>
-          <p className="mt-2 text-base text-ink-muted">
-            Knee alignment and shoulder elevation run in video/live. Heel lift is metadata only.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <section aria-label="Curriculum summary" className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[
+          [exercises.length, 'Exercises'],
+          [coverage.total, 'Correction records'],
+          [implemented, 'Camera-ready records'],
+          [coverage.cameraDetectable, 'Detector metadata records'],
+        ].map(([value, label]) => (
+          <div key={label} className="stat-card">
+            <p className="text-3xl font-medium tracking-tight text-accent">{value}</p>
+            <p className="mt-2 text-xs text-ink-muted">{label}</p>
+          </div>
+        ))}
       </section>
-
-      <p className="text-base text-ink-faint">
-        Browse the shared curriculum.{' '}
-        <Link href="/admin" className="text-accent underline">
-          Manage exercises and corrections →
-        </Link>
-      </p>
-
-      {exercises.map((e) => (
-        <ExerciseSection key={e.id} exercise={e} />
-      ))}
+      <div className="grid items-start gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="surface space-y-4 p-4 lg:sticky lg:top-28" aria-label="Browse exercises">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold text-ink-muted">
+              Find an exercise
+            </span>
+            <input
+              type="search"
+              className="form-control"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Name or language alias"
+            />
+          </label>
+          <div className="flex flex-col gap-1">
+            {visible.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => setSelectedId(e.id)}
+                aria-pressed={selected?.id === e.id}
+                className={`flex min-h-12 items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors ${selected?.id === e.id ? 'bg-accent/12 text-accent ring-1 ring-inset ring-accent/20' : 'text-ink-muted hover:bg-panel-raised'}`}
+              >
+                <span>{e.name}</span>
+                <span className="font-mono text-xs text-ink-faint">{e.corrections.length}</span>
+              </button>
+            ))}
+          </div>
+          <Link href="/admin" className="button-secondary w-full">
+            Manage curriculum →
+          </Link>
+        </aside>
+        <div className="min-w-0 space-y-4">
+          {selected ? (
+            <ExerciseSection key={selected.id} exercise={selected} />
+          ) : (
+            <StateMessage title="No matching exercises">
+              Try another name or clear the search field.
+            </StateMessage>
+          )}
+          <Disclosure title={`${dataset.label} · about this curriculum`}>
+            <p>{dataset.notice}</p>
+            <p>
+              Camera-ready records use experimental knee-alignment or shoulder-elevation rules. Heel
+              lift has metadata only and is not implemented. This is not validated ballet technique
+              assessment.
+            </p>
+          </Disclosure>
+        </div>
+      </div>
     </div>
   );
 }
@@ -147,14 +193,14 @@ function ExerciseSection({ exercise: e }: { exercise: ExerciseDto }) {
     Boolean,
   );
   return (
-    <section aria-labelledby={`ex-${e.slug}`} className="rounded-3xl border border-line bg-panel">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line p-6 sm:p-8">
+    <section aria-labelledby={`ex-${e.slug}`} className="surface overflow-hidden">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line/70 p-5 sm:p-6">
         <div>
-          <h2 id={`ex-${e.slug}`} className="text-4xl font-semibold tracking-tight">
+          <h2 id={`ex-${e.slug}`} className="font-editorial text-3xl font-normal sm:text-4xl">
             {e.name}
           </h2>
           {terms.length ? (
-            <p className="mt-2 text-lg text-ink-muted">{terms.join('   ·   ')}</p>
+            <p className="mt-2 text-sm text-ink-muted">{terms.join('   ·   ')}</p>
           ) : null}
         </div>
         <div className="flex gap-2 text-sm text-ink-muted">
@@ -179,33 +225,29 @@ function ExerciseSection({ exercise: e }: { exercise: ExerciseDto }) {
 
 function CorrectionRow({ c }: { c: CorrectionDto }) {
   return (
-    <li className="grid gap-4 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
+    <li className="grid gap-3 p-5 sm:p-6 2xl:grid-cols-[1fr_auto] 2xl:items-center">
       <div>
-        <p className="text-2xl font-medium">{c.errorName}</p>
-        <p className="mt-2 text-xl font-bold tracking-wide uppercase">{c.cuePhrase}</p>
-        <p className="mt-2 text-lg text-ink-muted">{c.correction}</p>
+        <p className="text-xs font-medium text-ink-faint">{c.errorName}</p>
+        <p className="mt-2 text-xl font-medium text-ink sm:text-2xl">{c.cuePhrase}</p>
+        <p className="mt-2 text-sm text-ink-muted">{c.correction}</p>
         {c.detectorIssue ? (
           <p className="mt-2 font-mono text-sm text-danger">{c.detectorIssue}</p>
         ) : null}
       </div>
-      <div className="md:text-right">
+      <div className="2xl:text-right">
         {c.camera === 'supported' && c.detector ? (
           <>
             <span
-              className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-base font-semibold ${supportsRule(c.detector.rule) ? 'border-ok/50 text-ok' : 'border-warn/50 text-warn'}`}
+              className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium ${supportsRule(c.detector.rule) ? 'border-ok/50 text-ok' : 'border-warn/50 text-warn'}`}
             >
-              {supportsRule(c.detector.rule)
-                ? 'Camera: implemented prototype'
-                : 'Camera: metadata only'}
+              {supportsRule(c.detector.rule) ? 'Camera · experimental' : 'Metadata only'}
             </span>
-            <p className="mt-2 font-mono text-sm text-ink-faint">
+            <p className="mt-2 font-mono text-[10px] text-ink-faint">
               {c.detector.rule} · threshold {c.detector.threshold}
             </p>
           </>
         ) : (
-          <span className="inline-flex rounded-full border border-line px-4 py-1.5 text-base text-ink-faint">
-            Camera: not supported
-          </span>
+          <span className="chip">Voice / text only</span>
         )}
       </div>
     </li>

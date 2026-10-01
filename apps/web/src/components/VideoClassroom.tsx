@@ -1,4 +1,6 @@
 'use client';
+import { Disclosure } from './Disclosure';
+import { FilmIcon } from './icons';
 import { TechnicalPanel } from './TechnicalPanel';
 import { StatusBadge } from './StatusBadge';
 import { StateMessage } from './StateMessage';
@@ -208,14 +210,7 @@ export function VideoClassroom() {
               ? 'One side has insufficient visibility; only visible measurements are evaluated.'
               : 'Pose is measurable. Warnings require sustained geometry.';
   return (
-    <section className="space-y-7">
-      <div className="rounded-2xl border border-ok/40 bg-panel p-6">
-        <p className="text-xl font-semibold text-ok">Your video stays on this device.</p>
-        <p className="mt-2 text-ink-muted">
-          Frames are analyzed in a browser worker. No video or frame is uploaded or stored on our
-          server. Only the pose model and curriculum are downloaded.
-        </p>
-      </div>
+    <section className="space-y-4">
       {catalogLoading && (
         <StateMessage title="Loading curriculum…">
           A sleeping API may take up to a minute.
@@ -236,258 +231,292 @@ export function VideoClassroom() {
           </button>
         </StateMessage>
       )}
-      <div className="grid gap-6 md:grid-cols-2">
-        <label
-          className="rounded-xl border-2 border-dashed border-line p-6"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            choose(event.dataTransfer.files[0]);
-          }}
-        >
-          <span className="mb-3 block text-xl font-semibold">Choose or drop a local video</span>
-          <input
-            type="file"
-            accept="video/*"
-            onChange={(event) => {
-              choose(event.target.files?.[0]);
-              event.target.value = '';
-            }}
-            className="w-full text-lg"
-          />
-          <span className="mt-3 block text-sm text-ink-muted">
-            MP4 or WebM recommended · maximum 5 minutes
-          </span>
-        </label>
-        <div>
-          <label className="mb-3 block text-xl font-semibold" htmlFor="video-exercise">
-            Analyze as
-          </label>
-          <select
-            id="video-exercise"
-            className="w-full rounded-lg border border-line bg-panel p-4 text-2xl"
-            value={exerciseId}
-            disabled={busy || !exercises.length}
-            onChange={(event) => {
-              reset();
-              setExerciseId(event.target.value);
-            }}
-          >
-            {exercises.map((e) => (
-              <option value={e.id} key={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-3 text-ink-muted">
-            Manual exercise context. No movement classification or ballet score.
-          </p>
-        </div>
-      </div>
-      <p className="text-lg text-ink-muted">
-        Use a fixed, level, front-facing camera with one dancer’s ears, shoulders, hips, knees and
-        ankles visible. For port de bras, begin with at least 1.5 seconds of still, relaxed
-        shoulders. These geometric cues are a prototype, not an authoritative assessment of
-        technique.
-      </p>
-      <p className="text-ink-muted">
-        Available: knee alignment and calibrated shoulder elevation. Heel-lift detection is
-        unavailable because this view cannot reliably separate heel motion from foot rotation and
-        camera perspective.
-      </p>
-      {url && (
-        <div>
-          <p className="mb-3 break-all text-ink-muted">{filename}</p>
-          <div className="relative overflow-hidden rounded-xl bg-black">
-            <video
-              ref={video}
-              src={url}
-              controls={!busy}
-              muted
-              playsInline
-              className="block w-full"
-              onLoadedMetadata={() => {
-                const duration = video.current?.duration ?? 0;
-                if (!Number.isFinite(duration) || duration <= 0 || duration > 300) {
-                  setError('Choose a playable video up to 5 minutes long.');
-                  setReady(false);
-                  setStatus('error');
-                } else {
-                  setReady(true);
-                  setError('');
-                }
-              }}
-              onError={() => {
-                controller.current?.abort();
-                setReady(false);
-                setError('Unsupported or corrupt video. Try a playable MP4 (H.264) or WebM file.');
-                setStatus('error');
-              }}
-              onTimeUpdate={syncPlayback}
-              onSeeked={syncPlayback}
-            />
-            <canvas
-              ref={canvas}
-              aria-hidden
-              className="pointer-events-none absolute inset-0 h-full w-full object-contain"
-            />
+      <div className="workspace-grid">
+        <div className="preview-column surface p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="eyebrow">Video studio</p>
+            <span className="chip text-aqua">Local processing</span>
           </div>
-        </div>
-      )}
-      <div className="flex flex-wrap items-center gap-4">
-        <button
-          disabled={!ready || !bindings.length || busy}
-          onClick={() => void start()}
-          className="rounded-xl bg-accent px-7 py-4 text-xl font-bold text-stage disabled:opacity-40"
-        >
-          Start analysis
-        </button>
-        {busy && (
-          <button onClick={cancel} className="rounded-xl border border-line px-7 py-4 text-xl">
-            Stop analysis
-          </button>
-        )}
-        <button onClick={reset} className="rounded-xl border border-line px-7 py-4 text-xl">
-          Reset analysis
-        </button>
-        <label className="text-lg">
-          <input
-            type="checkbox"
-            checked={overlay}
-            onChange={(event) => setOverlay(event.target.checked)}
-            className="mr-2"
-          />
-          Pose overlay
-        </label>
-      </div>
-      <div aria-live="polite">
-        <p className="text-xl capitalize">
-          <StatusBadge state={status} />
-          {status === 'cancelled' ? ' — partial results retained.' : ''}
-        </p>
-        {busy && (
-          <p className="text-ink-muted">
-            {status === 'loading_model'
-              ? 'Loading MediaPipe and its model; first use needs a download.'
-              : `${metrics.analyzedFrames} frames analyzed`}
-          </p>
-        )}
-      </div>
-      <progress
-        value={progress}
-        max={1}
-        aria-label="Analysis progress"
-        className="h-3 w-full accent-accent"
-      />
-      {error && (
-        <StateMessage
-          tone={status === 'complete' ? 'warn' : 'danger'}
-          title={status === 'complete' ? 'No measurements available' : 'Unable to continue'}
-        >
-          {error}
-        </StateMessage>
-      )}
-      <section
-        className="rounded-2xl border border-line bg-panel p-7"
-        aria-label="Current corrections"
-      >
-        <h2 className="text-2xl font-semibold">At {timeLabel(currentMs)}</h2>
-        <p className="mt-3 text-ink-muted">{signalMessage}</p>
-        {currentCorrections.length ? (
-          currentCorrections.map((c) => (
-            <article key={c.id} className="mt-6 border-t border-line pt-6">
-              <p className="text-xl text-accent">{c.errorName}</p>
-              <h3 className="mt-2 text-4xl font-bold">{c.cuePhrase}</h3>
-              <p className="mt-4 text-2xl">{c.correction}</p>
-            </article>
-          ))
-        ) : (
-          <p className="mt-5 text-2xl">
-            No active warning. This does not establish correct technique.
-          </p>
-        )}
-      </section>
-      <section aria-label="Detection timeline">
-        <h2 className="mb-4 text-3xl font-semibold">Detection timeline</h2>
-        {!events.length && (
-          <p className="text-ink-muted">
-            {metrics.analyzedFrames
-              ? 'No sustained detector events in analyzed frames.'
-              : 'Analyze a clip to create a timeline.'}{' '}
-            Unmeasurable frames are not treated as alignment OK.
-          </p>
-        )}
-        <ol className="space-y-3">
-          {events.map((event) => {
-            const correction = exercise?.corrections.find((c) => c.id === event.correctionId);
-            return (
-              <li key={event.id}>
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    if (video.current) {
-                      video.current.pause();
-                      video.current.currentTime = event.startMs / 1000;
+          {!url && (
+            <div className="preview-stage">
+              <span className="preview-label">Your movement, in focus</span>
+              <div className="preview-empty">
+                <FilmIcon />
+                <h2 className="text-xl font-medium text-ink">Bring your practice into view</h2>
+                <p className="max-w-xs text-sm text-ink-muted">
+                  Choose a local video below. Nothing is uploaded.
+                </p>
+              </div>
+            </div>
+          )}
+          {url && (
+            <div>
+              <p className="mb-3 truncate font-mono text-xs text-ink-faint">{filename}</p>
+              <div className="preview-stage">
+                <video
+                  ref={video}
+                  src={url}
+                  controls={!busy}
+                  muted
+                  playsInline
+                  className="block h-full w-full object-contain"
+                  onLoadedMetadata={() => {
+                    const duration = video.current?.duration ?? 0;
+                    if (!Number.isFinite(duration) || duration <= 0 || duration > 300) {
+                      setError('Choose a playable video up to 5 minutes long.');
+                      setReady(false);
+                      setStatus('error');
+                    } else {
+                      setReady(true);
+                      setError('');
                     }
                   }}
-                  className={`w-full rounded-xl border p-5 text-left disabled:opacity-70 ${active.some((e) => e.id === event.id) ? 'border-accent bg-panel-raised' : 'border-line bg-panel'}`}
-                >
-                  <span className="font-mono text-lg">
-                    {timeLabel(event.startMs)}–
-                    {event.endMs === null ? 'active' : timeLabel(event.endMs)}
-                  </span>
-                  <span className="ml-5 text-xl font-semibold">
-                    {correction?.errorName ?? 'Correction unavailable'} · {event.side}
-                  </span>
-                  {event.endReason === 'tracking_lost' && (
-                    <span className="ml-3 text-warn">Tracking lost</span>
-                  )}
-                  {event.endReason === 'cancelled' && (
-                    <span className="ml-3 text-warn">Cancelled</span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-      <TechnicalPanel>
-        <dl className="mt-4 grid grid-cols-2 gap-5 md:grid-cols-3">
-          {[
-            ['Analyzed frames', metrics.analyzedFrames],
-            [
-              'Processing FPS',
-              metrics.elapsedMs
-                ? ((metrics.analyzedFrames * 1000) / metrics.elapsedMs).toFixed(1)
-                : '—',
-            ],
-            [
-              'Mean MediaPipe inference',
-              metrics.analyzedFrames
-                ? `${(metrics.inferenceMs / metrics.analyzedFrames).toFixed(1)} ms`
-                : '—',
-            ],
-            [
-              'Mean detector evaluation',
-              metrics.analyzedFrames
-                ? `${(metrics.detectorMs / metrics.analyzedFrames).toFixed(2)} ms`
-                : '—',
-            ],
-            ['Generated events', events.length],
-            ['Measurable frames', metrics.measurableFrames],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-ink-muted">{label}</dt>
-              <dd className="text-2xl">{value}</dd>
+                  onError={() => {
+                    controller.current?.abort();
+                    setReady(false);
+                    setError(
+                      'Unsupported or corrupt video. Try a playable MP4 (H.264) or WebM file.',
+                    );
+                    setStatus('error');
+                  }}
+                  onTimeUpdate={syncPlayback}
+                  onSeeked={syncPlayback}
+                />
+                <canvas
+                  ref={canvas}
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                />
+              </div>
             </div>
-          ))}
-        </dl>
-        <p className="mt-4 text-ink-muted">
-          10 Hz media-time sampling; one in-flight frame, maximum 960 px input. Processing FPS
-          includes decoding and excludes model download. Landmark visibility is not a probability
-          that a correction is needed.
-        </p>
-      </TechnicalPanel>
+          )}
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label
+                className="min-w-0 rounded-xl border border-dashed border-accent/30 bg-accent/5 p-4"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  choose(event.dataTransfer.files[0]);
+                }}
+              >
+                <span className="mb-2 block text-sm font-semibold">
+                  Choose or drop a local video
+                </span>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={(event) => {
+                    choose(event.target.files?.[0]);
+                    event.target.value = '';
+                  }}
+                  className="w-full min-w-0 text-xs"
+                />
+                <span className="mt-2 block text-xs text-ink-muted">
+                  MP4 or WebM recommended · maximum 5 minutes
+                </span>
+              </label>
+              <div>
+                <label className="mb-2 block text-sm font-semibold" htmlFor="video-exercise">
+                  Analyze as
+                </label>
+                <select
+                  id="video-exercise"
+                  className="form-control"
+                  value={exerciseId}
+                  disabled={busy || !exercises.length}
+                  onChange={(event) => {
+                    reset();
+                    setExerciseId(event.target.value);
+                  }}
+                >
+                  {exercises.map((e) => (
+                    <option value={e.id} key={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-ink-faint">
+                  Manual exercise context. No movement classification or ballet score.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                disabled={!ready || !bindings.length || busy}
+                onClick={() => void start()}
+                className="button-primary"
+              >
+                Start analysis
+              </button>
+              {busy && (
+                <button onClick={cancel} className="button-secondary">
+                  Stop analysis
+                </button>
+              )}
+              <button onClick={reset} className="button-secondary">
+                Reset analysis
+              </button>
+              <label className="ml-auto flex min-h-11 items-center text-xs text-ink-muted">
+                <input
+                  type="checkbox"
+                  checked={overlay}
+                  onChange={(event) => setOverlay(event.target.checked)}
+                  className="mr-2"
+                />
+                Pose overlay
+              </label>
+            </div>
+            <div aria-live="polite">
+              <p className="flex items-center gap-2 text-xs capitalize">
+                <StatusBadge state={status} />
+                {status === 'cancelled' ? ' — partial results retained.' : ''}
+              </p>
+              {busy && (
+                <p className="mt-2 text-xs text-ink-muted">
+                  {status === 'loading_model'
+                    ? 'Loading MediaPipe and its model; first use needs a download.'
+                    : `${metrics.analyzedFrames} frames analyzed`}
+                </p>
+              )}
+            </div>
+            <progress
+              value={progress}
+              max={1}
+              aria-label="Analysis progress"
+              className="h-1.5 w-full accent-accent"
+            />
+          </div>
+          <p className="privacy-note mt-3 text-xs">Your video stays on this device.</p>
+        </div>
+        <div className="insight-column">
+          {error && (
+            <StateMessage
+              tone={status === 'complete' ? 'warn' : 'danger'}
+              title={status === 'complete' ? 'No measurements available' : 'Unable to continue'}
+            >
+              {error}
+            </StateMessage>
+          )}
+          <Disclosure title="Feedback · current frame" open>
+            <div aria-label="Current corrections">
+              <h2 className="text-xs font-mono text-aqua">At {timeLabel(currentMs)}</h2>
+              <p className="mt-3 text-ink-muted">{signalMessage}</p>
+              {currentCorrections.length ? (
+                currentCorrections.map((c) => (
+                  <article key={c.id} className="correction-card mt-4">
+                    <p className="text-xs text-accent">{c.errorName}</p>
+                    <h3 className="correction-cue">{c.cuePhrase}</h3>
+                    <p className="mt-3 text-base leading-relaxed text-ink-muted">{c.correction}</p>
+                  </article>
+                ))
+              ) : (
+                <p className="mt-4 rounded-xl border border-dashed border-line p-5 text-base text-ink-muted">
+                  No active warning. This does not establish correct technique.
+                </p>
+              )}
+            </div>
+          </Disclosure>
+          <Disclosure title={`Timeline · ${events.length} events`}>
+            <h2 className="sr-only">Detection timeline</h2>
+            {!events.length && (
+              <p className="text-ink-muted">
+                {metrics.analyzedFrames
+                  ? 'No sustained detector events in analyzed frames.'
+                  : 'Analyze a clip to create a timeline.'}{' '}
+                Unmeasurable frames are not treated as alignment OK.
+              </p>
+            )}
+            <ol className="space-y-3">
+              {events.map((event) => {
+                const correction = exercise?.corrections.find((c) => c.id === event.correctionId);
+                return (
+                  <li key={event.id}>
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        if (video.current) {
+                          video.current.pause();
+                          video.current.currentTime = event.startMs / 1000;
+                        }
+                      }}
+                      className={`w-full rounded-xl border p-4 text-left disabled:opacity-70 ${active.some((e) => e.id === event.id) ? 'border-accent bg-panel-raised' : 'border-line bg-panel'}`}
+                    >
+                      <span className="font-mono text-xs text-aqua">
+                        {timeLabel(event.startMs)}–
+                        {event.endMs === null ? 'active' : timeLabel(event.endMs)}
+                      </span>
+                      <span className="mt-2 block text-base font-medium">
+                        {correction?.errorName ?? 'Correction unavailable'} · {event.side}
+                      </span>
+                      {event.endReason === 'tracking_lost' && (
+                        <span className="mt-1 block text-xs text-warn">Tracking lost</span>
+                      )}
+                      {event.endReason === 'cancelled' && (
+                        <span className="mt-1 block text-xs text-warn">Cancelled</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </Disclosure>
+          <TechnicalPanel>
+            <dl className="metrics-grid">
+              {[
+                ['Analyzed frames', metrics.analyzedFrames],
+                [
+                  'Processing FPS',
+                  metrics.elapsedMs
+                    ? ((metrics.analyzedFrames * 1000) / metrics.elapsedMs).toFixed(1)
+                    : '—',
+                ],
+                [
+                  'Mean MediaPipe inference',
+                  metrics.analyzedFrames
+                    ? `${(metrics.inferenceMs / metrics.analyzedFrames).toFixed(1)} ms`
+                    : '—',
+                ],
+                [
+                  'Mean detector evaluation',
+                  metrics.analyzedFrames
+                    ? `${(metrics.detectorMs / metrics.analyzedFrames).toFixed(2)} ms`
+                    : '—',
+                ],
+                ['Generated events', events.length],
+                ['Measurable frames', metrics.measurableFrames],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-ink-muted">{label}</dt>
+                  <dd className="text-2xl">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-4 text-ink-muted">
+              10 Hz media-time sampling; one in-flight frame, maximum 960 px input. Processing FPS
+              includes decoding and excludes model download. Landmark visibility is not a
+              probability that a correction is needed.
+            </p>
+          </TechnicalPanel>
+          <Disclosure title="Studio guide · setup & privacy">
+            <p className="text-sm text-ink-muted">
+              Use a fixed, level, front-facing camera with one dancer’s ears, shoulders, hips, knees
+              and ankles visible. For port de bras, begin with at least 1.5 seconds of still,
+              relaxed shoulders. These geometric cues are a prototype, not an authoritative
+              assessment of technique.
+            </p>
+            <p className="text-ink-muted">
+              Available: knee alignment and calibrated shoulder elevation. Heel-lift detection is
+              unavailable because this view cannot reliably separate heel motion from foot rotation
+              and camera perspective.
+            </p>
+            <p>
+              Frames are analyzed in a browser worker. No video or frame is uploaded or stored on
+              our server. Only the model and curriculum are downloaded.
+            </p>
+          </Disclosure>
+        </div>
+      </div>
     </section>
   );
 }

@@ -1,21 +1,26 @@
 import Link from 'next/link';
-
-export function PageHeader({ eyebrow, title }: { eyebrow?: string; title: string }) {
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+}) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-6">
+    <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        {eyebrow ? (
-          <p className="text-sm font-semibold tracking-[0.3em] text-ink-faint uppercase">
-            {eyebrow}
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">{title}</h1>
+        {description && (
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted sm:text-base">
+            {description}
           </p>
-        ) : null}
-        <h1 className="mt-2 text-5xl font-semibold tracking-tight sm:text-6xl">{title}</h1>
+        )}
       </div>
-      <Link
-        href="/"
-        className="rounded-lg border border-line px-4 py-2 text-base text-ink-muted hover:border-ink-faint hover:text-ink"
-      >
-        ← Classroom
+      <Link href="/" className="text-xs text-ink-faint transition-colors hover:text-accent">
+        ← Back to classroom
       </Link>
     </header>
   );

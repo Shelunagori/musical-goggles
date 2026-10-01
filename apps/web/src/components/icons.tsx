@@ -38,3 +38,9 @@ export const ArrowIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 );
+
+export const BookIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M12 5C8 3 5 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-2-1-5-1-9 1Zm0 0v15" />
+  </svg>
+);

@@ -1,4 +1,5 @@
 'use client';
+import { MicIcon } from './icons';
 import { TechnicalPanel } from './TechnicalPanel';
 import { StatusBadge } from './StatusBadge';
 import { StateMessage } from './StateMessage';
@@ -216,114 +217,158 @@ export function VoiceClassroom() {
   }
 
   return (
-    <section className="space-y-8">
-      <div className="flex flex-wrap items-center gap-5">
-        <button
-          className="rounded-xl bg-accent px-8 py-5 text-2xl font-bold text-stage disabled:opacity-50"
-          disabled={state === 'connecting'}
-          onClick={() => (recording ? stopRecording.current() : void start())}
-        >
-          {recording ? 'Stop microphone' : 'Ask by voice'}
-        </button>
-        <span role="status" className="text-xl capitalize text-ink-muted">
-          <StatusBadge state={state} />
-          {recording && state !== 'listening' ? ' · microphone on' : ''}
-        </span>
-      </div>
-      <p className="text-ink-muted">
-        Speak in English, German or French. Audio is streamed to Deepgram for transcription and is
-        not saved by this app.
-      </p>
-      <div
-        aria-live="polite"
-        className="min-h-32 rounded-2xl border border-line bg-panel p-8 text-3xl font-medium leading-relaxed md:text-5xl"
-      >
-        {transcript || 'Ask about an exercise or a correction.'}
-      </div>
-      {error && (
-        <StateMessage tone="danger" title="Unable to continue">
-          {error}
-        </StateMessage>
-      )}
-      <details className="rounded-xl border border-line p-5">
-        <summary className="cursor-pointer text-xl font-semibold">Type instead</summary>
-        <form
-          className="mt-5 flex flex-wrap gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void typedSearch();
-          }}
-        >
-          <label className="w-full text-ink-muted" htmlFor="voice-query">
-            Ask the same curriculum search
-          </label>
-          <input
-            id="voice-query"
-            required
-            maxLength={1000}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Knees in during plié"
-            className="min-w-0 flex-1 rounded-lg border border-line bg-stage p-4 text-2xl"
-          />
-          <button
-            disabled={!query.trim() || state === 'searching'}
-            className="rounded-lg bg-ink px-6 py-4 text-xl font-bold text-stage disabled:opacity-50"
-          >
-            Search
-          </button>
-        </form>
-      </details>
-      {result && (
-        <div className="space-y-5">
-          <p className="text-ink-muted">
-            {result.query.detectedExercise?.name ?? 'All exercises'} ·{' '}
-            {result.mode === 'hybrid' ? 'Hybrid retrieval' : 'Full-text retrieval'} · DEMO DATA
+    <section className="workspace-grid">
+      <div className="preview-column space-y-4">
+        <div className="surface surface-pad space-y-5">
+          <div className="flex items-center justify-between">
+            <p className="eyebrow">Start a conversation</p>
+            <span className="text-xs text-ink-faint">EN / DE / FR</span>
+          </div>
+          <div className="flex items-center gap-4 py-3">
+            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent">
+              <MicIcon className="h-7 w-7" />
+            </span>
+            <div>
+              <h2 className="section-title">A question. A teaching cue.</h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Name an exercise and what you’re noticing.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="button-primary min-h-14 px-6 text-base"
+              disabled={state === 'connecting'}
+              onClick={() => (recording ? stopRecording.current() : void start())}
+            >
+              <MicIcon className="h-5 w-5" />
+              {recording ? 'Stop microphone' : 'Ask by voice'}
+            </button>
+            <span role="status" className="text-xs capitalize text-ink-muted">
+              <StatusBadge state={state} />
+              {recording && state !== 'listening' ? ' · microphone on' : ''}
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed text-ink-faint">
+            Speak in English, German or French. Audio streams to Deepgram for transcription and is
+            not saved by this app.
           </p>
-          {!result.results.length && (
-            <StateMessage title="No matching corrections">
-              Try naming an exercise and body part.
+          <p className="eyebrow text-ink-faint">Your words</p>
+          <div
+            aria-live="polite"
+            className="min-h-36 rounded-2xl border border-line/80 bg-stage/50 p-5 text-2xl font-medium leading-relaxed sm:text-3xl"
+          >
+            {transcript || 'Ask about an exercise or a correction.'}
+          </div>
+          {error && (
+            <StateMessage tone="danger" title="Unable to continue">
+              {error}
             </StateMessage>
           )}
-          {result.results.map(({ correction, exerciseName }) => (
-            <article key={correction.id} className="rounded-2xl border border-line bg-panel p-8">
-              <p className="mb-3 text-xl text-accent">
-                {exerciseName} · {correction.errorName}
-              </p>
-              <h2 className="text-4xl font-bold md:text-5xl">{correction.cuePhrase}</h2>
-              <p className="mt-5 text-2xl leading-relaxed">{correction.correction}</p>
-            </article>
-          ))}
-          <TechnicalPanel>
-            <p className="mt-4">Normalized: {result.query.normalizedQuery}</p>
-            <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-              {Object.entries(result.metrics).map(([key, value]) => (
-                <div key={key}>
-                  <dt className="text-ink-muted">
-                    {
-                      (
-                        {
-                          sttMs: 'STT delivery',
-                          normalizationMs: 'Normalization',
-                          searchMs: 'Search',
-                          totalMs: 'Total',
-                        } as Record<string, string>
-                      )[key]
-                    }
-                  </dt>
-                  <dd className="text-2xl">
-                    {value === null ? 'Not used' : `${Math.round(value)} ms`}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-3 text-sm text-ink-muted">
-              STT delivery measures final transcript arrival after the latest audio chunk; total
-              adds retrieval time and excludes speaking duration.
-            </p>
-          </TechnicalPanel>
         </div>
-      )}
+        <details className="disclosure" open>
+          <summary>Type instead</summary>
+          <form
+            className="flex flex-wrap gap-3 border-t border-line/70 p-5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void typedSearch();
+            }}
+          >
+            <label className="w-full text-xs text-ink-faint" htmlFor="voice-query">
+              Ask the same curriculum search
+            </label>
+            <input
+              id="voice-query"
+              required
+              maxLength={1000}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Knees in during plié"
+              className="form-control flex-1"
+            />
+            <button disabled={!query.trim() || state === 'searching'} className="button-primary">
+              Search
+            </button>
+          </form>
+        </details>
+      </div>
+      <div className="insight-column">
+        <div className="flex items-center justify-between">
+          <h2 className="section-title">From the curriculum</h2>
+          <span className="chip">Shared records</span>
+        </div>
+        {!result && (
+          <div className="surface flex min-h-64 flex-col justify-center p-7">
+            <p className="font-editorial text-3xl italic text-accent">
+              Clarity starts with a question.
+            </p>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
+              Your matching correction cards will appear here. Try asking “knees in during plié” by
+              voice or text.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-2">
+              <span className="chip">Exercise</span>
+              <span className="chip">Correction</span>
+              <span className="chip">Classroom cue</span>
+            </div>
+          </div>
+        )}
+        {result && (
+          <div className="space-y-5">
+            <p className="text-xs leading-relaxed text-ink-muted">
+              {result.query.detectedExercise?.name ?? 'All exercises'} ·{' '}
+              {result.mode === 'hybrid' ? 'Hybrid retrieval' : 'Full-text retrieval'} · DEMO DATA
+            </p>
+            {!result.results.length && (
+              <StateMessage title="No matching corrections">
+                Try naming an exercise and body part.
+              </StateMessage>
+            )}
+            {result.results.map(({ correction, exerciseName }) => (
+              <article key={correction.id} className="correction-card">
+                <p className="mb-3 text-xs font-medium text-accent">
+                  {exerciseName} · {correction.errorName}
+                </p>
+                <h2 className="text-3xl font-medium leading-tight tracking-tight sm:text-4xl">
+                  {correction.cuePhrase}
+                </h2>
+                <p className="mt-4 text-base leading-relaxed text-ink-muted">
+                  {correction.correction}
+                </p>
+              </article>
+            ))}
+            <TechnicalPanel>
+              <p className="mt-4">Normalized: {result.query.normalizedQuery}</p>
+              <dl className="metrics-grid">
+                {Object.entries(result.metrics).map(([key, value]) => (
+                  <div key={key}>
+                    <dt className="text-ink-muted">
+                      {
+                        (
+                          {
+                            sttMs: 'STT delivery',
+                            normalizationMs: 'Normalization',
+                            searchMs: 'Search',
+                            totalMs: 'Total',
+                          } as Record<string, string>
+                        )[key]
+                      }
+                    </dt>
+                    <dd className="text-2xl">
+                      {value === null ? 'Not used' : `${Math.round(value)} ms`}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-3 text-sm text-ink-muted">
+                STT delivery measures final transcript arrival after the latest audio chunk; total
+                adds retrieval time and excludes speaking duration.
+              </p>
+            </TechnicalPanel>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

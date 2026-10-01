@@ -17,10 +17,10 @@ export function StateMessage(props: {
   return (
     <div
       role={props.tone === 'danger' ? 'alert' : 'status'}
-      className={`rounded-2xl border bg-panel p-5 sm:p-6 ${tone}`}
+      className={`rounded-2xl border bg-panel/70 p-4 sm:p-5 ${tone}`}
     >
-      <p className="text-2xl font-semibold">{props.title}</p>
-      {props.children ? <div className="mt-3 text-lg text-ink-muted">{props.children}</div> : null}
+      <p className="text-base font-semibold">{props.title}</p>
+      {props.children ? <div className="mt-2 text-sm text-ink-muted">{props.children}</div> : null}
       {props.detail ? (
         <p className="mt-4 font-mono text-sm text-ink-faint">{props.detail}</p>
       ) : null}
