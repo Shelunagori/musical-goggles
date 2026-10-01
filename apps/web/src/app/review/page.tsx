@@ -117,34 +117,6 @@ export default function ReviewPage() {
           >
             <article className="surface overflow-hidden">
               <div className="space-y-3 p-5 sm:p-6">
-                <p className="eyebrow">Voice retrieval</p>
-                <h3 className="text-xl font-medium">From spoken words to a teaching cue.</h3>
-                <p className="text-sm leading-relaxed text-ink-muted">
-                  Prerecorded speech passes through browser audio capture and real Deepgram
-                  transcription. The final transcript retrieves actual Demi-plié corrections. This
-                  is automated audio input, not a live microphone demonstration.
-                </p>
-              </div>
-              <video
-                controls
-                muted
-                loop
-                playsInline
-                preload="none"
-                poster="/demo/voice-demo-poster.jpg"
-                aria-label="Voice retrieval recording using prerecorded speech and real Deepgram transcription"
-                className="block aspect-[36/25] w-full bg-stage"
-              >
-                <source src="/demo/voice-demo.mp4" type="video/mp4" />
-                <a href="/demo/voice-demo.mp4">Download the voice retrieval recording</a>
-              </video>
-              <p className="border-t border-line p-5 text-xs leading-relaxed text-ink-muted">
-                Audio → WebSocket → Deepgram → normalization → PostgreSQL retrieval → shared
-                correction records. This take uses full-text retrieval.
-              </p>
-            </article>
-            <article className="surface overflow-hidden">
-              <div className="space-y-3 p-5 sm:p-6">
                 <p className="eyebrow">Video analysis</p>
                 <h3 className="text-xl font-medium">Follow the points. Inspect the evidence.</h3>
                 <p className="text-sm leading-relaxed text-ink-muted">
@@ -173,6 +145,34 @@ export default function ReviewPage() {
                 Local video → MediaPipe landmarks → deterministic geometry → shared correction
                 taxonomy. The application does not classify the exercise or upload the source clip.
                 These published screen recordings are separate, intentionally shared demo assets.
+              </p>
+            </article>
+            <article className="surface overflow-hidden">
+              <div className="space-y-3 p-5 sm:p-6">
+                <p className="eyebrow">Voice retrieval</p>
+                <h3 className="text-xl font-medium">From spoken words to a teaching cue.</h3>
+                <p className="text-sm leading-relaxed text-ink-muted">
+                  Prerecorded speech passes through browser audio capture and real Deepgram
+                  transcription. The final transcript retrieves actual Demi-plié corrections. This
+                  is automated audio input, not a live microphone demonstration.
+                </p>
+              </div>
+              <video
+                controls
+                muted
+                loop
+                playsInline
+                preload="none"
+                poster="/demo/voice-demo-poster.jpg"
+                aria-label="Voice retrieval recording using prerecorded speech and real Deepgram transcription"
+                className="block aspect-[36/25] w-full bg-stage"
+              >
+                <source src="/demo/voice-demo.mp4" type="video/mp4" />
+                <a href="/demo/voice-demo.mp4">Download the voice retrieval recording</a>
+              </video>
+              <p className="border-t border-line p-5 text-xs leading-relaxed text-ink-muted">
+                Audio → WebSocket → Deepgram → normalization → PostgreSQL retrieval → shared
+                correction records. This take uses full-text retrieval.
               </p>
             </article>
           </ReviewSection>
