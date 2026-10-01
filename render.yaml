@@ -25,6 +25,8 @@ services:
         sync: false
       - key: ADMIN_API_TOKEN
         generateValue: true
+      - key: DEMO_ADMIN_ENABLED
+        value: 'false'
       - key: EMBEDDING_ENABLED
         value: 'false'
       - key: EMBEDDING_ALLOW_DOWNLOAD

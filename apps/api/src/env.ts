@@ -34,6 +34,11 @@ const EnvSchema = z.object({
         .filter(Boolean),
     ),
 
+  DEMO_ADMIN_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+
   ADMIN_API_TOKEN: z.string().min(32).max(256).optional(),
 
   // --- Phase 2 (optional until then) ---
@@ -76,6 +81,13 @@ export function parseEnv(source: NodeJS.ProcessEnv | Record<string, string | und
       );
     }
   }
+  if (
+    result.data.DEMO_ADMIN_ENABLED &&
+    result.data.NODE_ENV === 'production' &&
+    (!result.data.CORS_ORIGINS.length ||
+      result.data.CORS_ORIGINS.some((origin) => !origin.startsWith('https://')))
+  )
+    throw new EnvError('Demo admin requires exact HTTPS CORS_ORIGINS in production.');
   return result.data;
 }
 

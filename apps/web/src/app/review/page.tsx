@@ -329,9 +329,12 @@ export default function ReviewPage() {
             </div>
             <Disclosure title="Admin access, updates and safe logging">
               <p>
-                Admin is protected by a server-side token entered interactively. The browser holds
-                it only in page memory and clears it on lock or reload. This is a single-operator
-                demo gate, not a multi-user permission system.
+                When enabled by the API, Unlock demo admin creates a 45-minute HttpOnly session. It
+                never shares the private admin token. Demo admin changes affect the shared demo
+                curriculum. Lock admin revokes the session; an API restart also ends it. This is
+                public demo convenience, not production authentication or a multi-user permission
+                system. Private operators can still enter their token manually; it stays only in
+                page memory until lock or reload.
               </p>
               <p>
                 Validated forms create/edit exercises and corrections and delete corrections. Text

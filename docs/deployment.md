@@ -46,6 +46,7 @@ Use the repository-root `render.yaml` as a Blueprint, or copy its settings into 
 | `DATABASE_POOL_MAX`        | `5`                                                                                                      |
 | `CORS_ORIGINS`             | Exact stable Vercel HTTPS origin, no trailing slash; comma-separated if necessary                        |
 | `ADMIN_API_TOKEN`          | Random 32–256 character secret; Blueprint generates one, or generate locally with `openssl rand -hex 32` |
+| `DEMO_ADMIN_ENABLED`       | `false` by default; set `true` only for intentional shared-demo CRUD access                              |
 | `DEEPGRAM_API_KEY`         | Optional server-only Deepgram key; absent means typed retrieval only                                     |
 | `EMBEDDING_ENABLED`        | `false`                                                                                                  |
 | `EMBEDDING_ALLOW_DOWNLOAD` | `false`                                                                                                  |
@@ -68,9 +69,9 @@ Import the monorepo into the intended Vercel account:
 
 The public API origin is baked in at build time. Changing it requires a frontend rebuild. Missing/invalid production configuration fails rather than silently targeting localhost. Local production smoke builds can explicitly set `NEXT_PUBLIC_API_URL=http://localhost:4100`.
 
-Do not set `DATABASE_URL`, `DEEPGRAM_API_KEY`, `ADMIN_API_TOKEN`, or Supabase service credentials on the frontend. Admin users enter the token interactively; it remains in memory and goes only to the API's Authorization header. Lock/reload clears it. No token cookies or localStorage.
+Do not set `DATABASE_URL`, `DEEPGRAM_API_KEY`, `ADMIN_API_TOKEN`, or Supabase service credentials on the frontend. Admin users enter the token interactively; it remains in memory and goes only to the API's Authorization header. Lock/reload clears it. The private token is never stored in cookies or localStorage. Optional demo sessions use a separate opaque HttpOnly cookie; see [demo-admin configuration](demo-admin.md).
 
-HTTP CORS grants only configured origins, never `*`. A disallowed origin receives no allow-origin header; CORS is not authentication. WebSocket upgrades explicitly reject a mismatched browser Origin with 403. Non-browser clients without Origin remain allowed as before; the public search/STT endpoint is a demo, not a per-user authenticated/quota-controlled service. Add only specific preview origins if needed; do not allow every `*.vercel.app` site. Local development uses `http://localhost:3000` separately.
+HTTP CORS grants credentials only to configured exact origins, never `*`. Demo cookie requests also require a matching Origin and `X-Demo-Admin: 1` on the server. A disallowed origin receives no allow-origin header; CORS is not authentication. WebSocket upgrades explicitly reject a mismatched browser Origin with 403. Non-browser clients without Origin remain allowed as before; the public search/STT endpoint is a demo, not a per-user authenticated/quota-controlled service. Add only specific preview origins if needed; do not allow every `*.vercel.app` site. Local development uses `http://localhost:3000` separately.
 
 ## 4. Browser assets, permissions and privacy
 

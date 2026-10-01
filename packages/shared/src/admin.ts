@@ -39,3 +39,10 @@ export const CorrectionInputSchema = z
 export const MutationResponseSchema = z.object({ id: z.uuid() });
 export type ExerciseInput = z.infer<typeof ExerciseInputSchema>;
 export type CorrectionInput = z.infer<typeof CorrectionInputSchema>;
+
+export const DemoSessionResponseSchema = z.object({
+  enabled: z.boolean(),
+  active: z.boolean(),
+  expiresAt: z.number().int().positive().nullable(),
+});
+export type DemoSessionResponse = z.infer<typeof DemoSessionResponseSchema>;

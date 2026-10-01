@@ -21,6 +21,8 @@ export interface AppDeps {
   repo: CurriculumRepository;
   adminRepo?: PgAdminRepository;
   adminToken?: string;
+  demoAdminEnabled?: boolean;
+  production?: boolean;
   search?: SearchService;
   speechFactory?: SpeechFactory;
   corsOrigins: string[];
@@ -76,6 +78,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   await app.register(cors, {
     origin: deps.corsOrigins,
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposedHeaders: ['x-request-id'],
   });

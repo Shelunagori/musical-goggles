@@ -48,3 +48,69 @@ it('maps non-JSON and incomplete success responses to actionable errors', async 
   vi.stubGlobal('fetch', async () => new Response('{}'));
   await expect(adminRequest('/exercises', 'POST', 'token')).rejects.toThrow('incomplete');
 });
+
+it('uses cookie credentials and a preflight header for demo writes, never a bearer token', async () => {
+  const fetcher = vi.fn(
+    async () => new Response(JSON.stringify({ id: '00000000-0000-4000-8000-000000000001' })),
+  );
+  vi.stubGlobal('fetch', fetcher);
+  await adminRequest('/exercises', 'POST', '', { name: 'Demo' });
+  expect(fetcher).toHaveBeenCalledWith(
+    expect.stringContaining('/admin/exercises'),
+    expect.objectContaining({
+      credentials: 'include',
+      headers: { 'x-demo-admin': '1', 'content-type': 'application/json' },
+    }),
+  );
+});
+
+it('confirms cookie round-trip before unlocking and handles blocked cookies honestly', async () => {
+  const { unlockDemoSession } = await import('./admin');
+  const fetcher = vi.fn(
+    async () =>
+      new Response(JSON.stringify({ enabled: true, active: true, expiresAt: Date.now() + 1000 })),
+  );
+  vi.stubGlobal('fetch', fetcher);
+  expect((await unlockDemoSession()).active).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(fetcher.mock.calls).toEqual([
+    [
+      expect.stringContaining('/admin/demo-session'),
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'x-demo-admin': '1' },
+      }),
+    ],
+    [
+      expect.stringContaining('/admin/demo-session'),
+      expect.objectContaining({
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'x-demo-admin': '1' },
+      }),
+    ],
+  ]);
+  vi.stubGlobal(
+    'fetch',
+    async () => new Response(JSON.stringify({ enabled: true, active: false, expiresAt: null })),
+  );
+  await expect(unlockDemoSession()).rejects.toThrow('did not retain');
+});
+
+it('sends logout to the API, rejects disabled/expired access, and does not persist secrets', async () => {
+  const { demoSessionRequest, AdminRequestError } = await import('./admin');
+  const fetcher = vi.fn(
+    async () => new Response(JSON.stringify({ enabled: true, active: false, expiresAt: null })),
+  );
+  vi.stubGlobal('fetch', fetcher);
+  expect((await demoSessionRequest('logout')).active).toBe(false);
+  expect(fetcher).toHaveBeenCalledWith(
+    expect.stringContaining('/admin/demo-session/logout'),
+    expect.objectContaining({ method: 'POST', credentials: 'include' }),
+  );
+  for (const status of [401, 503]) {
+    vi.stubGlobal('fetch', async () => new Response('{}', { status }));
+    await expect(demoSessionRequest('unlock')).rejects.toBeInstanceOf(AdminRequestError);
+  }
+});

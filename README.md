@@ -92,9 +92,11 @@ Webcam frames use the same MediaPipe worker, adapter, pose engine, temporal filt
 
 ## Curriculum admin (Phase 5)
 
-Set a random `ADMIN_API_TOKEN` of 32–256 characters in the **API environment only**, then restart the API. Generate one locally with `openssl rand -hex 32`. Never put it in `NEXT_PUBLIC_` variables or commit it. Without a token, admin writes are disabled; public curriculum/search still work.
+Set a random `ADMIN_API_TOKEN` of 32–256 characters in the **API environment only**, then restart the API. Generate one locally with `openssl rand -hex 32`. Never put it in `NEXT_PUBLIC_` variables or commit it. Without a token or explicitly enabled demo sessions, admin writes are disabled; public curriculum/search still work.
 
-Open `/admin`, enter the token and choose **Unlock admin**. The token stays in page memory, is sent in the Authorization header, and is discarded on reload/lock. This is a single-operator demo credential, not a multi-user account system. Use HTTPS outside localhost.
+For public review, set API-only `DEMO_ADMIN_ENABLED=true` (default `false`). `/admin` then offers **Unlock demo admin**, backed by a 45-minute HttpOnly cookie; no private token is sent to reviewers. Changes affect the shared demo curriculum. See [session security and exact deployment configuration](docs/demo-admin.md).
+
+For private access, open **Private admin · manual token**, enter the token and choose **Unlock admin**. The token stays in page memory, is sent in the Authorization header, and is discarded on reload/lock. This is a single-operator demo credential, not a multi-user account system. Use HTTPS outside localhost.
 
 - Create/edit exercises, names, French/German terms, level/category and multilingual aliases.
 - Create/edit corrections, descriptions, cue phrases and instructions. Slugs use snake_case.

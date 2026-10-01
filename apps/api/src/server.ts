@@ -29,6 +29,8 @@ async function main(): Promise<void> {
     repo: new PgCurriculumRepository(pool),
     adminRepo: new PgAdminRepository(pool),
     adminToken: env.ADMIN_API_TOKEN,
+    demoAdminEnabled: env.DEMO_ADMIN_ENABLED,
+    production: env.NODE_ENV === 'production',
     corsOrigins: env.CORS_ORIGINS,
     search: new SearchService(
       pool,

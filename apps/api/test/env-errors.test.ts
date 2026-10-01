@@ -8,9 +8,31 @@ describe('parseEnv', () => {
   it('applies defaults', () => {
     const env = parseEnv(base);
     expect(env.PORT).toBe(4000);
+    expect(env.DEMO_ADMIN_ENABLED).toBe(false);
     expect(env.DATABASE_SSL).toBe('auto');
     expect(env.CORS_ORIGINS).toEqual(['http://localhost:3000']);
     expect(env.DEEPGRAM_API_KEY).toBeUndefined();
+  });
+
+  it('enables demo admin explicitly and requires HTTPS origins in production', () => {
+    expect(parseEnv({ ...base, DEMO_ADMIN_ENABLED: 'true' }).DEMO_ADMIN_ENABLED).toBe(true);
+    expect(() => parseEnv({ ...base, DEMO_ADMIN_ENABLED: 'yes' })).toThrow('DEMO_ADMIN_ENABLED');
+    expect(() =>
+      parseEnv({
+        ...base,
+        NODE_ENV: 'production',
+        DEMO_ADMIN_ENABLED: 'true',
+        CORS_ORIGINS: 'http://localhost:3000',
+      }),
+    ).toThrow('HTTPS');
+    expect(
+      parseEnv({
+        ...base,
+        NODE_ENV: 'production',
+        DEMO_ADMIN_ENABLED: 'true',
+        CORS_ORIGINS: 'https://classroom.vercel.app',
+      }).DEMO_ADMIN_ENABLED,
+    ).toBe(true);
   });
 
   it('requires DATABASE_URL and explains where to find it', () => {

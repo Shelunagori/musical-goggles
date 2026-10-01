@@ -217,14 +217,14 @@ The browser admin screen uses the existing Fastify API and PostgreSQL taxonomy. 
 
 | Method | Route                              | Behavior                                                             |
 | ------ | ---------------------------------- | -------------------------------------------------------------------- |
-| GET    | `/admin/status`                    | Verify the admin token; no-store response                            |
+| GET    | `/admin/status`                    | Verify token or demo session; no-store response                      |
 | POST   | `/admin/exercises`                 | Create an exercise and aliases atomically; 201 + ID                  |
 | PUT    | `/admin/exercises/:id`             | Replace editable exercise fields and sync aliases; 200 + ID          |
 | POST   | `/admin/exercises/:id/corrections` | Create a correction in that exercise; 201 + ID                       |
 | PUT    | `/admin/corrections/:id`           | Replace editable correction fields, preserving ID/exercise; 200 + ID |
 | DELETE | `/admin/corrections/:id`           | Delete the correction; 200 + ID, subsequent deletion 404             |
 
-Every admin route requires `Authorization: Bearer <ADMIN_API_TOKEN>`. The server compares token digests in constant time. Missing configuration disables the routes with 503 `ADMIN_DISABLED`; missing/wrong authorization returns 401 `UNAUTHORIZED`. The token is never a public env value or stored in browser persistence, and existing logging redacts Authorization. Admin supports one trusted operator; per-user accounts, audit history and concurrent edit conflict resolution are not implemented.
+Admin CRUD accepts either `Authorization: Bearer <ADMIN_API_TOKEN>` (constant-time digest comparison) or an explicitly enabled demo session. `DEMO_ADMIN_ENABLED=false` by default. `GET /admin/demo-session` reports availability/current session without secrets; POST issues a 45-minute opaque session and POST `/admin/demo-session/logout` revokes it. The API stores only session-ID hashes, expiry and exact originating frontend origin in a bounded in-memory store. Cookie requests require an allowed Origin plus `X-Demo-Admin: 1`; production cookies are HttpOnly, Secure, SameSite=None, Partitioned and host-only under `/admin`. Private token requests remain independent. All admin responses are no-store. No new database tables or external session service. See [demo-admin design and limitations](demo-admin.md).
 
 Writes use parameterized raw SQL and a checked-out client transaction. Alias synchronization is incremental so saving unchanged aliases does not transiently delete terms and invalidate vectors. Existing triggers maintain search documents and embeddings. Constraint conflicts return 409, malformed/invalid inputs 400, absent records/parents 404. Responses never expose vectors. Ambiguous network failures tell the user to reload before retrying; writes are not retried automatically.
 

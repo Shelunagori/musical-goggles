@@ -7,7 +7,12 @@ import {
   type CorrectionInput,
 } from '@mg/shared';
 import { fetchJson } from '@/lib/api';
-import { adminRequest } from '@/lib/admin';
+import {
+  adminRequest,
+  AdminRequestError,
+  demoSessionRequest,
+  unlockDemoSession,
+} from '@/lib/admin';
 import { config } from '@/lib/config';
 import { StateMessage } from './StateMessage';
 import { CorrectionForm, ExerciseForm } from './AdminForms';
@@ -16,6 +21,10 @@ type Editor =
   { kind: 'exercise'; id?: string } | { kind: 'correction'; exerciseId: string; id?: string };
 export function CurriculumAdmin() {
   const [token, setToken] = useState('');
+  const [demoEnabled, setDemoEnabled] = useState<boolean | null>(null);
+  const [demoExpiresAt, setDemoExpiresAt] = useState<number | null>(null);
+  const [accessError, setAccessError] = useState('');
+  const unlocked = Boolean(token || demoExpiresAt);
   const [exercises, setExercises] = useState<ExerciseDto[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -54,11 +63,77 @@ export function CurriculumAdmin() {
   useEffect(() => {
     requests.current = new AbortController();
     void load();
+    void checkDemo(requests.current.signal);
     return () => requests.current.abort();
   }, [load]);
   useEffect(() => {
     if (editor) heading.current?.focus();
   }, [editor]);
+  useEffect(() => {
+    if (!demoExpiresAt) return;
+    const timer = setTimeout(
+      () => {
+        setDemoExpiresAt(null);
+        setEditor(null);
+        setDeleting(null);
+        setNotice('Demo session expired. Unlock demo admin again to continue.');
+      },
+      Math.max(0, demoExpiresAt - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [demoExpiresAt]);
+  async function checkDemo(signal: AbortSignal) {
+    setAccessError('');
+    try {
+      const session = await demoSessionRequest('status', signal);
+      if (signal.aborted) return;
+      setDemoEnabled(session.enabled);
+      setDemoExpiresAt(session.active ? session.expiresAt : null);
+    } catch {
+      if (!signal.aborted)
+        setAccessError('Could not check demo access. Retry when the API is ready.');
+    }
+  }
+  async function unlockDemo() {
+    setBusy(true);
+    setError('');
+    try {
+      const session = await unlockDemoSession(requests.current.signal);
+      setDemoExpiresAt(session.expiresAt);
+      setNotice('Demo admin active. This session lasts up to 45 minutes.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not unlock demo admin.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function lock() {
+    setBusy(true);
+    setError('');
+    try {
+      if (demoExpiresAt) await demoSessionRequest('logout', requests.current.signal);
+      setToken('');
+      setDemoExpiresAt(null);
+      setEditor(null);
+      setDeleting(null);
+      setNotice('Admin locked.');
+    } catch {
+      setError(
+        'Logout could not be confirmed. Retry Lock admin; the session may still be active until it expires.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  function handleWriteError(err: unknown, fallback: string) {
+    if (err instanceof AdminRequestError && (err.status === 401 || err.status === 403)) {
+      setToken('');
+      setDemoExpiresAt(null);
+      setEditor(null);
+      setDeleting(null);
+    }
+    setError(err instanceof Error ? err.message : fallback);
+  }
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const candidate = String(new FormData(event.currentTarget).get('token') ?? '');
@@ -100,7 +175,7 @@ export function CurriculumAdmin() {
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save.');
+      handleWriteError(err, 'Could not save.');
     } finally {
       setBusy(false);
     }
@@ -122,7 +197,7 @@ export function CurriculumAdmin() {
       setNotice('Correction deleted from the shared curriculum.');
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete.');
+      handleWriteError(err, 'Could not delete.');
     } finally {
       setBusy(false);
     }
@@ -146,34 +221,73 @@ export function CurriculumAdmin() {
           <div>
             <p className="eyebrow">Workspace access</p>
             <h2 className="mt-2 text-xl font-medium">
-              {token ? 'Ready to edit' : 'Unlock your curriculum'}
+              {demoExpiresAt
+                ? 'Demo admin active'
+                : token
+                  ? 'Ready to edit'
+                  : 'Unlock your curriculum'}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">
               Shared records. One place to keep every classroom mode consistent.
             </p>
           </div>
-          {!token ? (
-            <form onSubmit={(event) => void unlock(event)} className="space-y-4">
-              <label className="grid gap-2">
-                <span>Admin token</span>
-                <input
-                  name="token"
-                  type="password"
-                  autoComplete="off"
-                  required
-                  minLength={32}
-                  maxLength={256}
-                  className="form-control"
-                />
-              </label>
-              <p className="text-sm text-ink-muted">
-                Use the token configured on your API server. It stays in page memory and is cleared
-                on reload or lock.
+          {(demoEnabled || demoExpiresAt) && (
+            <p className="rounded-xl border border-warn/30 bg-warn/5 p-3 text-sm text-warn">
+              Demo admin — changes affect the shared demo curriculum.
+            </p>
+          )}
+          {!unlocked && demoEnabled === null && !accessError && (
+            <p role="status" className="text-sm text-ink-muted">
+              Checking demo access…
+            </p>
+          )}
+          {accessError && (
+            <div className="space-y-2">
+              <p role="alert" className="text-sm text-warn">
+                {accessError}
               </p>
-              <button disabled={busy} className="button-primary">
-                {busy ? 'Checking…' : 'Unlock admin'}
+              <button
+                className="button-secondary"
+                onClick={() => void checkDemo(requests.current.signal)}
+              >
+                Retry access check
               </button>
-            </form>
+            </div>
+          )}
+          {!unlocked && demoEnabled && (
+            <button
+              className="button-primary w-full"
+              disabled={busy}
+              onClick={() => void unlockDemo()}
+            >
+              {busy ? 'Checking…' : 'Unlock demo admin'}
+            </button>
+          )}
+          {!unlocked ? (
+            <details className="disclosure" open={demoEnabled === false}>
+              <summary>Private admin · manual token</summary>
+              <form onSubmit={(event) => void unlock(event)} className="disclosure-body space-y-4">
+                <label className="grid gap-2">
+                  <span>Admin token</span>
+                  <input
+                    name="token"
+                    type="password"
+                    autoComplete="off"
+                    required
+                    minLength={32}
+                    maxLength={256}
+                    className="form-control"
+                  />
+                </label>
+                <p className="text-sm text-ink-muted">
+                  Use the token configured on your API server. It stays in page memory and is
+                  cleared on reload or lock.
+                </p>
+                <button disabled={busy} className="button-primary">
+                  {busy ? 'Checking…' : 'Unlock admin'}
+                </button>
+              </form>
+            </details>
           ) : (
             <div className="flex flex-col gap-3">
               <button
@@ -183,17 +297,7 @@ export function CurriculumAdmin() {
               >
                 Create exercise
               </button>
-              <button
-                disabled={busy}
-                className="button-secondary"
-                onClick={() => {
-                  setToken('');
-                  setEditor(null);
-                  setDeleting(null);
-                  setNotice('Admin locked.');
-                  setError('');
-                }}
-              >
+              <button disabled={busy} className="button-secondary" onClick={() => void lock()}>
                 Lock admin
               </button>
             </div>
@@ -245,7 +349,7 @@ export function CurriculumAdmin() {
               Unlock admin and create the first exercise.
             </StateMessage>
           )}
-          {editor && token ? (
+          {editor && unlocked ? (
             <section className="surface surface-pad">
               <h2 ref={heading} tabIndex={-1} className="mb-5 text-2xl font-medium">
                 {editor.id ? 'Edit' : 'Create'} {editor.kind}
@@ -275,7 +379,7 @@ export function CurriculumAdmin() {
               <section className="surface surface-pad space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <h2 className="font-editorial text-3xl font-normal">{selected.name}</h2>
-                  {token && (
+                  {unlocked && (
                     <div className="flex flex-wrap gap-3">
                       <button
                         className="button-secondary"
@@ -324,7 +428,7 @@ export function CurriculumAdmin() {
                             {correction.detector?.rule.replaceAll('_', ' ') ?? 'No camera detector'}
                           </p>
                         </div>
-                        {token && (
+                        {unlocked && (
                           <div className="flex gap-3">
                             <button
                               className="button-secondary"
