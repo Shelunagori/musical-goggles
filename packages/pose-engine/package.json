@@ -1,0 +1,20 @@
+{
+  "name": "@mg/pose-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Framework-free pose geometry + detector contract shared by uploaded-video and live-camera analysis. Detectors land in Phase 3.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mg/taxonomy": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
+  }
+}

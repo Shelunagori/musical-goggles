@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+/*
+ * Studio / LED-display palette: near-black stage, high-contrast type,
+ * two semantic colours only (ok / warn). Readable from across a ballet studio.
+ */
+@theme {
+  --color-stage: #0b0c0e;
+  --color-panel: #15171b;
+  --color-panel-raised: #1d2026;
+  --color-line: #2a2e36;
+  --color-ink: #f5f5f4;
+  --color-ink-muted: #a1a1aa;
+  --color-ink-faint: #71717a;
+  --color-ok: #4ade80;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+  --color-accent: #f0abfc;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-stage);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
