@@ -2,7 +2,7 @@
 
 A focused technical prototype: **one structured ballet correction taxonomy powering three input modes** — voice questions, uploaded video and live camera. All three resolve to the **same correction records**.
 
-> **Status: Phase 3 implemented.** Voice/typed retrieval and local uploaded-video analysis share one correction taxonomy. Live camera remains a placeholder. Geometric detectors still need validation on real ballet footage. See [Phase 3 verification](docs/phase3-verification.md).
+> **Status: Phase 4 implemented.** Voice/typed retrieval, local uploaded-video analysis and live camera share one correction taxonomy and one pose pipeline. Real webcam capture is blocked by permissions in the verification environment; geometric detectors still need validation on real ballet movement. See [Phase 4 verification](docs/phase4-verification.md).
 
 ## What this demo proves (and what it doesn't)
 
@@ -78,9 +78,17 @@ Open `/video`, choose Demi-plié or Port de bras, select a local file and start 
 
 The video stays in a browser blob URL. A worker downloads the pinned MediaPipe Tasks Vision runtime and Lite model, samples decoded frames at 10 Hz, then runs the shared pose engine. Nothing uploads the video or frames. Worker-response CSP allows model assets and blocks MediaPipe telemetry. Keep the configured `_next/static` response headers when hosting the app.
 
-Knee alignment and calibrated shoulder elevation are experimental 2D heuristics. Heel lift remains unavailable in the video engine; its existing taxonomy metadata is retained as a candidate, so the curriculum's metadata count of 3 is **not** a count of implemented video rules. The video selector only offers exercises with an implemented rule. No classifier, score or live webcam is included.
+Knee alignment and calibrated shoulder elevation are experimental 2D heuristics. Heel lift remains unavailable in the video engine; its existing taxonomy metadata is retained as a candidate, so the curriculum's metadata count of 3 is **not** a count of implemented video rules. The video selector only offers exercises with an implemented rule. No automatic classifier or ballet score is included.
 
 A completed analysis shows sustained-event intervals; click one to seek the player. Low visibility and missing poses are not called “alignment OK”. Reset or select another file to discard local results. Offline/model-download failures appear as errors. See [detector assumptions and verification](docs/phase3-verification.md).
+
+## Live camera analysis (Phase 4)
+
+Open `/live`, choose an available exercise and press **Start camera**. HTTPS or localhost and camera permission are required. Only exercises with implemented detectors are offered; their names and correction cards come from the same API records as voice and video. The preview is unmirrored so skeleton coordinates match it.
+
+Webcam frames use the same MediaPipe worker, adapter, pose engine, temporal filters and calibration as uploaded video. Sampling targets 10 Hz with one frame in flight. Shoulder checks need 1.5 seconds of stable, relaxed posture; calibration times out after 30 seconds. Knee checks need no baseline. Low visibility does not mean alignment is correct.
+
+**Stop camera**, leaving the page, hiding the tab or an interrupted stream releases camera tracks and the worker. Restart to acquire the current default camera and a fresh baseline. Sessions are limited to ten minutes to bound event history; no video is recorded or stored. Technical details show cadence, inference/evaluation timings and visibility. See [verification and limitations](docs/phase4-verification.md).
 
 ## Scripts
 
@@ -121,6 +129,6 @@ Single-camera 2D landmarks cannot reliably judge hip turnout, rotation, weight p
 1. ✅ Foundation
 2. ✅ Voice + Deepgram adapter + hybrid retrieval (live STT verification requires credentials)
 3. ✅ Uploaded video + browser MediaPipe + deterministic detectors and event intervals (real ballet validation outstanding)
-4. Live webcam on the same pose engine
+4. ✅ Live webcam on the same pose engine (actual webcam verification blocked by camera permission)
 5. Admin CRUD + UI polish + latency/debug panel
 6. Vercel + Render + Supabase deployment, end-to-end verification

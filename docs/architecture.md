@@ -1,6 +1,6 @@
 # Architecture — musical-goggles AI Classroom
 
-> Status: **Phase 3 implemented**. Voice/typed retrieval and uploaded-video analysis are implemented. Real microphone STT verification needs a key; real ballet footage validation remains outstanding. Live camera (Phase 4) is unimplemented.
+> Status: **Phase 4 implemented**. Voice/typed retrieval, uploaded-video and live-camera inputs share the taxonomy. Real microphone STT verification needs a key; real webcam capture is blocked by permission in the verification browser; ballet movement validation remains outstanding.
 
 ## The one rule
 
@@ -35,13 +35,13 @@ flowchart LR
   SEARCH -- correction records --> UI
 ```
 
-Video and camera frames never leave the browser. Only rule ids and, in Phase 2, audio for STT cross the network.
+Video and camera frames never leave the browser. Only curriculum/search requests and voice audio for STT cross the app network; pose events also stay in the browser.
 
 ## Repository layout
 
 | Path                   | Responsibility                                                                                                                      |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`             | Next.js 16 App Router + Tailwind v4. Classroom UI, curriculum view; later mic / video / webcam + MediaPipe.                         |
+| `apps/web`             | Next.js 16 App Router + Tailwind v4. Classroom UI, curriculum, voice, uploaded video and webcam + MediaPipe.                        |
 | `apps/api`             | Fastify 5. REST, (Phase 2) voice WebSocket + Deepgram, retrieval, admin CRUD, structured logs.                                      |
 | `packages/taxonomy`    | Domain vocabulary: detector contract (`DETECTOR_RULES`, `DetectorSchema`), levels, categories, slugs.                               |
 | `packages/shared`      | API wire contract as zod schemas + inferred types, used by both API (responses) and web (validation).                               |
@@ -183,7 +183,7 @@ No schema changes were required. See [verification and memory observations](phas
 
 The `/video` client loads the existing `GET /curriculum`, filters corrections through the pose engine's supported-rule registry, and lets the user select exercise context. It passes only correction IDs and detector configurations to the engine. Correction names, cues and instructions always come from the same DTOs served to voice retrieval. No CV database or new API route is needed.
 
-`video-analysis.ts` seeks a local blob-backed player at 100 ms media-time intervals, waits for decoded frames, resizes input to at most 960 pixels on its longest edge, and transfers one `ImageBitmap` at a time to `pose.worker.ts`. MediaPipe Tasks Vision 1.0.1 runs `PoseLandmarker.detectForVideo` in VIDEO mode with the version-1 Lite float16 model and CPU delegate. Inference stays off the main thread. The worker also owns the input-independent `PosePipeline`; Phase 4 can later replace the frame source without changing detectors or event filtering.
+`video-analysis.ts` seeks a local blob-backed player at 100 ms media-time intervals, waits for decoded frames, resizes input to at most 960 pixels on its longest edge, and transfers one `ImageBitmap` at a time to `pose.worker.ts`. MediaPipe Tasks Vision 1.0.1 runs `PoseLandmarker.detectForVideo` in VIDEO mode with the version-1 Lite float16 model and CPU delegate. Inference stays off the main thread. The worker also owns the input-independent `PosePipeline`; The Phase 4 webcam source uses this same worker without changing detectors or event filtering.
 
 MediaPipe image x/y coordinates are corrected for aspect ratio before torso normalization. Pure rule functions return side, rule, status, normalized measurement, minimum visibility and relevant landmark indices. Visibility is a tracking-quality measure, not a correction confidence score. Empty or multi-person frames produce unmeasurable results. A fixed frontal view is required.
 
@@ -194,3 +194,15 @@ The UI keeps sampled landmarks for replay overlays and event intervals for seeki
 The current runtime includes usage telemetry. A CSP on the worker script response permits only same-origin assets and pinned model/WASM asset paths; other worker connections are blocked. This is scoped to script responses so the voice page's API/WebSocket connections are unaffected. The browser downloads runtime/model assets but no code path uploads media. Hosting must preserve these headers.
 
 See [Phase 3 verification](phase3-verification.md) for precise geometry, limitations and measured results.
+
+## Phase 4 live input source
+
+`LiveCameraSession` acquires a video-only `getUserMedia` stream and attaches it to a muted inline player. It uses the shared `captureFrame` resize/bitmap helper and unchanged `PoseWorkerClient`/`pose.worker.ts` protocol. No second MediaPipe model implementation, detector rule or temporal filter exists.
+
+Camera states: `idle → requesting → loading_model → calibrating (shoulders only) → analyzing`; Stop or tab hiding ends in `stopped`, failures in `error`. Restart creates a fresh session. Permission and playback waits are bounded; a late permission grant after cancellation immediately stops its tracks. Stream ended/mute, unmount and pagehide release all resources. Device switching requires stop, choosing the browser/system default camera, then start.
+
+A recursive timer targets 100 ms wall-clock intervals and skips missed slots instead of queueing frames. Duplicate media timestamps are skipped. Stale UI measurements clear after 350 ms; five seconds without new camera frames is an error. The worker has existing initialization and frame timeouts. Shoulder calibration remains entirely in `PosePipeline`; the wrapper imposes a 30-second deadline. A ten-minute session bound limits the existing temporal event history. React retains only the latest frame and scalar aggregate metrics, with no recording or landmark history.
+
+Only temporal events with an open interval generate current correction cards. IDs are deduplicated across left/right and resolved against the selected exercise's live curriculum DTOs. Raw per-frame violations never generate cards. Unsupported checks remain unavailable; absent/low-confidence poses do not claim correct technique.
+
+The unchanged worker response CSP blocks MediaPipe telemetry destinations and permits pinned model assets. No backend routes, database schema, voice/retrieval logic or dependencies were added for Phase 4. See [Phase 4 verification](phase4-verification.md).

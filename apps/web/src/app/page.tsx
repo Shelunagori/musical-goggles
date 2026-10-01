@@ -75,7 +75,7 @@ export default function ClassroomHome() {
                     ? 'Voice + typed search'
                     : phase === 3
                       ? 'Local video analysis'
-                      : `Phase ${phase} · not built yet`}
+                      : 'Local live camera'}
                 </span>
                 <ArrowIcon className="text-ink-muted transition-transform group-hover:translate-x-1" />
               </p>

@@ -1,5 +1,6 @@
 import type { DetectorBinding, DetectionEvent } from '@mg/pose-engine';
 import { PoseWorkerClient } from './worker-client';
+import { captureFrame } from './capture-frame';
 import type { FrameAnalysis } from './protocol';
 export const SAMPLE_INTERVAL_MS = 100;
 export const MAX_VIDEO_SECONDS = 300;
@@ -86,12 +87,7 @@ export async function analyzeVideo(
     for (const time of times) {
       await seekVideo(video, time / 1000, signal);
       if (signal.aborted) throw new Error('Analysis cancelled.');
-      // Resize before transfer to bound inference input memory; preserve aspect ratio.
-      const scale = Math.min(1, 960 / Math.max(video.videoWidth, video.videoHeight));
-      const bitmap = await createImageBitmap(video, {
-        resizeWidth: Math.max(1, Math.round(video.videoWidth * scale)),
-        resizeHeight: Math.max(1, Math.round(video.videoHeight * scale)),
-      });
+      const bitmap = await captureFrame(video);
       if (signal.aborted) {
         bitmap.close();
         throw new Error('Analysis cancelled.');
