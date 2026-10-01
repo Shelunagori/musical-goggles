@@ -2,12 +2,12 @@
 
 A focused technical prototype: **one structured ballet correction taxonomy powering three input modes** — voice questions, uploaded video and live camera. All three resolve to the **same correction records**.
 
-> **Status: Phase 4 implemented.** Voice/typed retrieval, local uploaded-video analysis and live camera share one correction taxonomy and one pose pipeline. Real webcam capture is blocked by permissions in the verification environment; geometric detectors still need validation on real ballet movement. See [Phase 4 verification](docs/phase4-verification.md).
+> **Status: Phase 5 implemented.** Curriculum admin, consistent classroom navigation/states and accessible forms are available. Voice/typed retrieval, uploaded video and live camera still share one taxonomy. Real STT needs a Deepgram key; webcam/ballet movement validation remains outstanding. See [Phase 5 verification](docs/phase5-verification.md).
 
 ## What this demo proves (and what it doesn't)
 
 - **Proves:** a single taxonomy record (`demi_plie / knees_inward → "Knees over toes"`) can be _retrieved_ by voice and _detected_ by pose analysis without duplicating correction definitions.
-- **Does not claim** general ballet technique correction. Only a handful of errors are plausibly observable from 2D landmarks; every other correction has `detector = null` and the UI says so (**Camera-detectable corrections: 3 / 29**).
+- **Does not claim** general ballet technique correction. Only a handful of errors are plausibly observable from 2D landmarks; every other correction has `detector = null` and the UI says so (**Seeded detector metadata: 3 / 29; two rules implemented**).
 - **Seed content is DEMO DATA** — generic public ballet terminology, not the musical-goggles proprietary curriculum.
 
 ## Architecture
@@ -90,6 +90,21 @@ Webcam frames use the same MediaPipe worker, adapter, pose engine, temporal filt
 
 **Stop camera**, leaving the page, hiding the tab or an interrupted stream releases camera tracks and the worker. Restart to acquire the current default camera and a fresh baseline. Sessions are limited to ten minutes to bound event history; no video is recorded or stored. Technical details show cadence, inference/evaluation timings and visibility. See [verification and limitations](docs/phase4-verification.md).
 
+## Curriculum admin (Phase 5)
+
+Set a random `ADMIN_API_TOKEN` of 32–256 characters in the **API environment only**, then restart the API. Generate one locally with `openssl rand -hex 32`. Never put it in `NEXT_PUBLIC_` variables or commit it. Without a token, admin writes are disabled; public curriculum/search still work.
+
+Open `/admin`, enter the token and choose **Unlock admin**. The token stays in page memory, is sent in the Authorization header, and is discarded on reload/lock. This is a single-operator demo credential, not a multi-user account system. Use HTTPS outside localhost.
+
+- Create/edit exercises, names, French/German terms, level/category and multilingual aliases.
+- Create/edit corrections, descriptions, cue phrases and instructions. Slugs use snake_case.
+- Edit detector metadata with a rule selector, threshold and optional persistence field. Raw JSON is not accepted by the form; the same strict schema validates API writes. Heel lift is labeled metadata-only because it is not implemented.
+- Delete a correction after explicit confirmation. Exercise deletion is intentionally outside this phase.
+
+Writes are transactional. Existing triggers make corrections immediately available to FTS. New vectors remain NULL until `pnpm db:embed`; retrieval-text edits invalidate old vectors, while unchanged terms/aliases and detector-only edits retain them. No embedding strategy changed. Reload an already-open video/live page after editing its taxonomy; active sessions retain their loaded snapshot. Concurrent editing currently uses last successful write wins.
+
+Navigation connects all modes and admin. Tab/Shift+Tab, Enter/Space, visible focus rings, a skip link and native expandable technical panels support keyboard use. See [the demo walkthrough and limitations](docs/phase5-verification.md).
+
 ## Scripts
 
 | Command                                              | What                                                                                                                 |
@@ -115,7 +130,7 @@ Webcam frames use the same MediaPipe worker, adapter, pose engine, temporal filt
 
 ## Known computer-vision limitations
 
-Single-camera 2D landmarks cannot reliably judge hip turnout, rotation, weight placement, pointe/foot articulation, épaulement or artistry. Those corrections stay `detector = null`. Even the three seeded candidates (knee alignment, heel lift, shoulder elevation) are **candidates** until validated on real footage in Phase 3; any that prove unreliable revert to `null`.
+Single-camera 2D landmarks cannot reliably judge hip turnout, rotation, weight placement, pointe/foot articulation, épaulement or artistry. Those corrections stay `detector = null`. Even the three seeded candidates (knee alignment, heel lift, shoulder elevation) are **candidates** until validated on real footage; any that prove unreliable revert to `null`.
 
 ## Privacy decisions
 
@@ -130,5 +145,5 @@ Single-camera 2D landmarks cannot reliably judge hip turnout, rotation, weight p
 2. ✅ Voice + Deepgram adapter + hybrid retrieval (live STT verification requires credentials)
 3. ✅ Uploaded video + browser MediaPipe + deterministic detectors and event intervals (real ballet validation outstanding)
 4. ✅ Live webcam on the same pose engine (actual webcam verification blocked by camera permission)
-5. Admin CRUD + UI polish + latency/debug panel
+5. ✅ Curriculum admin + UI polish + consistent technical panels
 6. Vercel + Render + Supabase deployment, end-to-end verification

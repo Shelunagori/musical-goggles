@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { ClassroomNav } from '@/components/ClassroomNav';
 
 export const metadata: Metadata = {
   title: 'musical-goggles · AI Classroom',
@@ -15,7 +16,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
+        <ClassroomNav />
+        {children}
+      </body>
     </html>
   );
 }

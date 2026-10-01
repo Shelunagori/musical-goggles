@@ -78,6 +78,9 @@ export type ExerciseResponse = z.infer<typeof ExerciseResponseSchema>;
 
 export const API_ERROR_CODES = [
   'BAD_REQUEST',
+  'UNAUTHORIZED',
+  'ADMIN_DISABLED',
+  'CONFLICT',
   'NOT_FOUND',
   'DATABASE_UNAVAILABLE',
   'DATA_INTEGRITY',

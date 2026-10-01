@@ -41,12 +41,16 @@ const MODES: Mode[] = [
 
 export default function ClassroomHome() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-7xl flex-col px-6 py-10 sm:px-10 lg:py-14">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="mx-auto flex min-h-dvh max-w-7xl flex-col px-6 py-10 sm:px-10 lg:py-14"
+    >
       <header>
         <p className="text-lg font-semibold tracking-[0.35em] text-ink-muted uppercase sm:text-xl">
           musical-goggles
         </p>
-        <h1 className="mt-3 text-6xl leading-none font-bold tracking-tight sm:text-8xl lg:text-9xl">
+        <h1 className="mt-3 text-5xl leading-none font-bold tracking-tight sm:text-7xl lg:text-8xl">
           AI CLASSROOM
         </h1>
         <p className="mt-6 max-w-3xl text-xl text-ink-muted sm:text-2xl">
@@ -60,7 +64,7 @@ export default function ClassroomHome() {
           <Link
             key={href}
             href={href}
-            className="group flex min-h-64 flex-col justify-between rounded-3xl border border-line bg-panel p-8 transition-colors hover:border-ink-faint hover:bg-panel-raised lg:min-h-80 lg:p-10"
+            className="group flex min-h-64 flex-col justify-between rounded-3xl border border-line bg-panel p-8 hover:border-ink-faint hover:bg-panel-raised lg:min-h-80 lg:p-10"
           >
             <div className="flex items-start justify-between text-ink-muted">
               <Icon className="h-12 w-12 text-ink" />
@@ -77,7 +81,7 @@ export default function ClassroomHome() {
                       ? 'Local video analysis'
                       : 'Local live camera'}
                 </span>
-                <ArrowIcon className="text-ink-muted transition-transform group-hover:translate-x-1" />
+                <ArrowIcon className="text-ink-muted" />
               </p>
             </div>
           </Link>

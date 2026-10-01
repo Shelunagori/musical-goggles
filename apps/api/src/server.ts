@@ -1,3 +1,4 @@
+import { PgAdminRepository } from './admin/repository';
 import { SearchService } from './search/service';
 import { E5Provider } from './search/embedding';
 import { deepgramFactory } from './voice/deepgram';
@@ -26,6 +27,8 @@ async function main(): Promise<void> {
   const pool = createPool(env, (err) => logger.error({ err }, 'postgres idle client error'));
   const app = await buildApp({
     repo: new PgCurriculumRepository(pool),
+    adminRepo: new PgAdminRepository(pool),
+    adminToken: env.ADMIN_API_TOKEN,
     corsOrigins: env.CORS_ORIGINS,
     search: new SearchService(
       pool,

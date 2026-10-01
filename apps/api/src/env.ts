@@ -34,6 +34,8 @@ const EnvSchema = z.object({
         .filter(Boolean),
     ),
 
+  ADMIN_API_TOKEN: z.string().min(32).max(256).optional(),
+
   // --- Phase 2 (optional until then) ---
   DEEPGRAM_API_KEY: z.string().min(1).optional(),
   EMBEDDING_ENABLED: z

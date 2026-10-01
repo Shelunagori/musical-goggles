@@ -1,4 +1,7 @@
 'use client';
+import { TechnicalPanel } from './TechnicalPanel';
+import { StatusBadge } from './StatusBadge';
+import { StateMessage } from './StateMessage';
 import { useEffect, useRef, useState } from 'react';
 import { CurriculumResponseSchema, type ExerciseDto } from '@mg/shared';
 import type { DetectionEvent } from '@mg/pose-engine';
@@ -214,10 +217,12 @@ export function VideoClassroom() {
         </p>
       </div>
       {catalogLoading && (
-        <p role="status">Loading curriculum detectors… A sleeping API may take up to a minute.</p>
+        <StateMessage title="Loading curriculum…">
+          A sleeping API may take up to a minute.
+        </StateMessage>
       )}
       {catalogError && (
-        <div role="alert" className="text-danger">
+        <StateMessage tone="danger" title="Curriculum unavailable">
           {catalogError}{' '}
           <button
             className="underline"
@@ -229,7 +234,7 @@ export function VideoClassroom() {
           >
             Retry curriculum
           </button>
-        </div>
+        </StateMessage>
       )}
       <div className="grid gap-6 md:grid-cols-2">
         <label
@@ -357,7 +362,7 @@ export function VideoClassroom() {
       </div>
       <div aria-live="polite">
         <p className="text-xl capitalize">
-          {status.replace('_', ' ')}
+          <StatusBadge state={status} />
           {status === 'cancelled' ? ' — partial results retained.' : ''}
         </p>
         {busy && (
@@ -375,9 +380,12 @@ export function VideoClassroom() {
         className="h-3 w-full accent-accent"
       />
       {error && (
-        <p role="alert" className="rounded-xl border border-danger p-5 text-xl text-danger">
+        <StateMessage
+          tone={status === 'complete' ? 'warn' : 'danger'}
+          title={status === 'complete' ? 'No measurements available' : 'Unable to continue'}
+        >
           {error}
-        </p>
+        </StateMessage>
       )}
       <section
         className="rounded-2xl border border-line bg-panel p-7"
@@ -443,8 +451,7 @@ export function VideoClassroom() {
           })}
         </ol>
       </section>
-      <details className="rounded-xl border border-line p-5">
-        <summary className="cursor-pointer text-xl">Technical details</summary>
+      <TechnicalPanel>
         <dl className="mt-4 grid grid-cols-2 gap-5 md:grid-cols-3">
           {[
             ['Analyzed frames', metrics.analyzedFrames],
@@ -480,7 +487,7 @@ export function VideoClassroom() {
           includes decoding and excludes model download. Landmark visibility is not a probability
           that a correction is needed.
         </p>
-      </details>
+      </TechnicalPanel>
     </section>
   );
 }

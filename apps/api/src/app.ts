@@ -1,3 +1,5 @@
+import { adminRoutes } from './routes/admin';
+import type { PgAdminRepository } from './admin/repository';
 import { randomUUID } from 'node:crypto';
 import Fastify, {
   LogController,
@@ -17,6 +19,8 @@ import { curriculumRoutes } from './routes/curriculum';
 
 export interface AppDeps {
   repo: CurriculumRepository;
+  adminRepo?: PgAdminRepository;
+  adminToken?: string;
   search?: SearchService;
   speechFactory?: SpeechFactory;
   corsOrigins: string[];
@@ -84,9 +88,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       err instanceof AppError
         ? err
         : (classifyDatabaseError(err) ??
-          ((err as { validation?: unknown }).validation
-            ? new AppError('BAD_REQUEST', (err as Error).message, 400)
-            : new AppError('INTERNAL', 'Unexpected server error', 500)));
+          ((err as { statusCode?: number }).statusCode === 400
+            ? new AppError('BAD_REQUEST', 'Request body is malformed or invalid.', 400)
+            : (err as { validation?: unknown }).validation
+              ? new AppError('BAD_REQUEST', (err as Error).message, 400)
+              : new AppError('INTERNAL', 'Unexpected server error', 500)));
 
     const route = request.routeOptions.url;
     if (appError.statusCode >= 500) {
@@ -120,6 +126,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   healthRoutes(app, deps);
   curriculumRoutes(app, deps);
+  await adminRoutes(app, deps);
 
   return app;
 }

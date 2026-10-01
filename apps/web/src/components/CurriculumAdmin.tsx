@@ -1,0 +1,362 @@
+'use client';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import {
+  CurriculumResponseSchema,
+  type ExerciseDto,
+  type ExerciseInput,
+  type CorrectionInput,
+} from '@mg/shared';
+import { fetchJson } from '@/lib/api';
+import { adminRequest } from '@/lib/admin';
+import { config } from '@/lib/config';
+import { StateMessage } from './StateMessage';
+import { CorrectionForm, ExerciseForm } from './AdminForms';
+
+type Editor =
+  { kind: 'exercise'; id?: string } | { kind: 'correction'; exerciseId: string; id?: string };
+export function CurriculumAdmin() {
+  const [token, setToken] = useState('');
+  const [exercises, setExercises] = useState<ExerciseDto[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const heading = useRef<HTMLHeadingElement>(null);
+  const requests = useRef(new AbortController());
+  const selected = exercises.find((exercise) => exercise.id === selectedId);
+  const load = useCallback(async () => {
+    setLoading(true);
+    const signal = requests.current.signal;
+    try {
+      const response = await fetchJson(config.apiUrl, '/curriculum', CurriculumResponseSchema, {
+        signal,
+        timeoutMs: 75_000,
+      });
+      if (!response.ok) throw new Error(response.message);
+      setExercises(response.data.exercises);
+      setSelectedId((id) =>
+        response.data.exercises.some((e) => e.id === id)
+          ? id
+          : (response.data.exercises[0]?.id ?? ''),
+      );
+      return true;
+    } catch (err) {
+      if (!signal.aborted)
+        setError(err instanceof Error ? err.message : 'Curriculum could not load.');
+      return false;
+    } finally {
+      if (!signal.aborted) setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    requests.current = new AbortController();
+    void load();
+    return () => requests.current.abort();
+  }, [load]);
+  useEffect(() => {
+    if (editor) heading.current?.focus();
+  }, [editor]);
+  async function unlock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const candidate = String(new FormData(event.currentTarget).get('token') ?? '');
+    setBusy(true);
+    setError('');
+    try {
+      await adminRequest('/status', 'GET', candidate, undefined, requests.current.signal);
+      setToken(candidate);
+      setNotice('Admin unlocked for this page only.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not unlock admin.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function save(input: ExerciseInput | CorrectionInput) {
+    if (!editor || busy) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const path =
+        editor.kind === 'exercise'
+          ? `/exercises${editor.id ? `/${editor.id}` : ''}`
+          : editor.id
+            ? `/corrections/${editor.id}`
+            : `/exercises/${editor.exerciseId}/corrections`;
+      const saved = await adminRequest(
+        path,
+        editor.id ? 'PUT' : 'POST',
+        token,
+        input,
+        requests.current.signal,
+      );
+      if (editor.kind === 'exercise' && 'id' in saved) setSelectedId(saved.id);
+      setEditor(null);
+      setNotice(
+        'Saved. Text search is available immediately. Reload classroom modes to load the updated curriculum.',
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove() {
+    if (!deleting || busy) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await adminRequest(
+        `/corrections/${deleting}`,
+        'DELETE',
+        token,
+        undefined,
+        requests.current.signal,
+      );
+      setDeleting(null);
+      setNotice('Correction deleted from the shared curriculum.');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  function edit(value: Editor) {
+    setEditor(value);
+    setDeleting(null);
+    setError('');
+    setNotice('');
+  }
+  return (
+    <section className="space-y-6">
+      <p className="text-lg text-ink-muted">
+        Manage the shared records used by voice, video and live camera. Changes apply to the
+        curriculum database.
+      </p>
+      {error && (
+        <StateMessage tone="danger" title="Action could not be completed">
+          {error}
+        </StateMessage>
+      )}
+      {notice && <StateMessage tone="success" title={notice} />}
+      {!token ? (
+        <form
+          onSubmit={(event) => void unlock(event)}
+          className="max-w-xl space-y-4 rounded-2xl border border-line bg-panel p-6"
+        >
+          <label className="grid gap-2">
+            <span>Admin token</span>
+            <input
+              name="token"
+              type="password"
+              autoComplete="off"
+              required
+              minLength={32}
+              maxLength={256}
+              className="form-control"
+            />
+          </label>
+          <p className="text-sm text-ink-muted">
+            Use the token configured on your API server. It stays in page memory and is cleared on
+            reload or lock.
+          </p>
+          <button disabled={busy} className="button-primary">
+            {busy ? 'Checking…' : 'Unlock admin'}
+          </button>
+        </form>
+      ) : (
+        <div className="flex flex-wrap gap-3">
+          <button
+            disabled={busy || Boolean(editor)}
+            className="button-primary"
+            onClick={() => edit({ kind: 'exercise' })}
+          >
+            Create exercise
+          </button>
+          <button
+            disabled={busy}
+            className="button-secondary"
+            onClick={() => {
+              setToken('');
+              setEditor(null);
+              setDeleting(null);
+              setNotice('Admin locked.');
+              setError('');
+            }}
+          >
+            Lock admin
+          </button>
+        </div>
+      )}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="grid min-w-0 flex-1 gap-2">
+          <span>Exercise</span>
+          <select
+            className="form-control"
+            value={selectedId}
+            disabled={busy || loading || Boolean(editor)}
+            onChange={(event) => {
+              setSelectedId(event.target.value);
+              setDeleting(null);
+            }}
+          >
+            {!exercises.length && <option value="">No exercises</option>}
+            {exercises.map((exercise) => (
+              <option key={exercise.id} value={exercise.id}>
+                {exercise.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="button-secondary"
+          disabled={busy || loading || Boolean(editor)}
+          onClick={() => {
+            setError('');
+            void load();
+          }}
+        >
+          Reload curriculum
+        </button>
+      </div>
+      {loading && (
+        <StateMessage title="Loading curriculum…">
+          A sleeping API may take up to a minute.
+        </StateMessage>
+      )}
+      {!loading && !exercises.length && (
+        <StateMessage title="No exercises yet">
+          Unlock admin and create the first exercise.
+        </StateMessage>
+      )}
+      {editor && token ? (
+        <section className="rounded-2xl border border-line bg-panel p-5 sm:p-8">
+          <h2 ref={heading} tabIndex={-1} className="mb-6 text-3xl font-semibold">
+            {editor.id ? 'Edit' : 'Create'} {editor.kind}
+          </h2>
+          {editor.kind === 'exercise' ? (
+            <ExerciseForm
+              key={`exercise:${editor.id ?? 'new'}`}
+              exercise={exercises.find((e) => e.id === editor.id)}
+              busy={busy}
+              onSave={(input) => void save(input)}
+              onCancel={() => setEditor(null)}
+            />
+          ) : (
+            <CorrectionForm
+              key={`correction:${editor.id ?? 'new'}`}
+              correction={exercises
+                .find((e) => e.id === editor.exerciseId)
+                ?.corrections.find((c) => c.id === editor.id)}
+              busy={busy}
+              onSave={(input) => void save(input)}
+              onCancel={() => setEditor(null)}
+            />
+          )}
+        </section>
+      ) : (
+        selected && (
+          <section className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-3xl font-semibold">{selected.name}</h2>
+              {token && (
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    className="button-secondary"
+                    disabled={busy}
+                    onClick={() => edit({ kind: 'exercise', id: selected.id })}
+                  >
+                    Edit exercise
+                  </button>
+                  <button
+                    className="button-primary"
+                    disabled={busy}
+                    onClick={() => edit({ kind: 'correction', exerciseId: selected.id })}
+                  >
+                    Create correction
+                  </button>
+                </div>
+              )}
+            </div>
+            {!selected.corrections.length && (
+              <StateMessage title="No corrections yet">
+                Add a correction to make this exercise available to retrieval.
+              </StateMessage>
+            )}
+            <ul className="space-y-3">
+              {selected.corrections.map((correction) => (
+                <li key={correction.id} className="rounded-xl border border-line bg-panel p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-xl font-semibold">{correction.errorName}</h3>
+                      <p className="mt-2 text-accent">{correction.cuePhrase}</p>
+                      <p className="mt-2 text-ink-muted">{correction.correction}</p>
+                      <p className="mt-3 text-sm text-ink-muted">
+                        {correction.hasEmbedding
+                          ? 'Embedding available'
+                          : 'Embedding pending backfill'}{' '}
+                        · {correction.detector?.rule.replaceAll('_', ' ') ?? 'No camera detector'}
+                      </p>
+                    </div>
+                    {token && (
+                      <div className="flex gap-3">
+                        <button
+                          className="button-secondary"
+                          disabled={busy}
+                          aria-label={`Edit ${correction.errorName}`}
+                          onClick={() =>
+                            edit({ kind: 'correction', exerciseId: selected.id, id: correction.id })
+                          }
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="button-secondary text-danger"
+                          disabled={busy}
+                          aria-label={`Delete ${correction.errorName}`}
+                          onClick={() => setDeleting(correction.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {deleting === correction.id && (
+                    <div role="alert" className="mt-5 space-y-4 border-t border-danger/50 pt-5">
+                      <p>
+                        Delete “{correction.errorName}” from voice, video and camera? This cannot be
+                        undone.
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          className="button-secondary text-danger"
+                          disabled={busy}
+                          onClick={() => void remove()}
+                        >
+                          {busy ? 'Deleting…' : 'Confirm delete'}
+                        </button>
+                        <button
+                          className="button-secondary"
+                          disabled={busy}
+                          onClick={() => setDeleting(null)}
+                        >
+                          Keep correction
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      )}
+    </section>
+  );
+}

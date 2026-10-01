@@ -48,6 +48,15 @@ export function classifyDatabaseError(err: unknown): AppError | null {
         { cause: err },
       );
     }
+    if (code === '23505')
+      return new AppError(
+        'CONFLICT',
+        'That slug or alias already exists. Choose a unique value.',
+        409,
+      );
+    if (code === '23503') return notFound('Parent exercise');
+    if (code === '23514')
+      return new AppError('BAD_REQUEST', 'The data violates a curriculum constraint.', 400);
     if (code === '42P01') {
       return new AppError(
         'DATABASE_UNAVAILABLE',

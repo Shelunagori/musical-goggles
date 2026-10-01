@@ -9,6 +9,8 @@ import {
 } from '@mg/shared';
 import { fetchJson, type ApiResult } from '@/lib/api';
 import { config } from '@/lib/config';
+import Link from 'next/link';
+import { supportsRule } from '@mg/pose-engine';
 import { StateMessage } from './StateMessage';
 
 const COLD_START_HINT_MS = 4_000;
@@ -63,8 +65,9 @@ export function CurriculumView() {
   if (exercises.length === 0) {
     return (
       <StateMessage tone="warn" title="The curriculum is empty">
-        The database is reachable but has no exercises. Run{' '}
-        <code className="font-mono">pnpm db:seed</code> to load the demo data.
+        <Link href="/admin" className="underline">
+          Open admin to create the first exercise.
+        </Link>
       </StateMessage>
     );
   }
@@ -78,19 +81,22 @@ export function CurriculumView() {
         </div>
         <div className="rounded-2xl border border-line bg-panel p-6 lg:min-w-96">
           <p className="text-sm font-semibold tracking-[0.2em] text-ink-faint uppercase">
-            Camera-detectable corrections
+            Corrections with detector metadata
           </p>
           <p className="mt-2 font-mono text-5xl font-semibold">
             {coverage.cameraDetectable} <span className="text-ink-faint">/ {coverage.total}</span>
           </p>
           <p className="mt-2 text-base text-ink-muted">
-            The rest need richer movement models or future trained computer-vision models.
+            Knee alignment and shoulder elevation run in video/live. Heel lift is metadata only.
           </p>
         </div>
       </section>
 
       <p className="text-base text-ink-faint">
-        Read-only view. Create / edit / delete arrives with the admin screen (Phase 5).
+        Browse the shared curriculum.{' '}
+        <Link href="/admin" className="text-accent underline">
+          Manage exercises and corrections →
+        </Link>
       </p>
 
       {exercises.map((e) => (
@@ -185,8 +191,12 @@ function CorrectionRow({ c }: { c: CorrectionDto }) {
       <div className="md:text-right">
         {c.camera === 'supported' && c.detector ? (
           <>
-            <span className="inline-flex items-center gap-2 rounded-full border border-ok/50 px-4 py-1.5 text-base font-semibold text-ok">
-              Camera: supported
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-base font-semibold ${supportsRule(c.detector.rule) ? 'border-ok/50 text-ok' : 'border-warn/50 text-warn'}`}
+            >
+              {supportsRule(c.detector.rule)
+                ? 'Camera: implemented prototype'
+                : 'Camera: metadata only'}
             </span>
             <p className="mt-2 font-mono text-sm text-ink-faint">
               {c.detector.rule} · threshold {c.detector.threshold}

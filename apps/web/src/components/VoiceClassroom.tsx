@@ -1,4 +1,7 @@
 'use client';
+import { TechnicalPanel } from './TechnicalPanel';
+import { StatusBadge } from './StatusBadge';
+import { StateMessage } from './StateMessage';
 
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -223,7 +226,7 @@ export function VoiceClassroom() {
           {recording ? 'Stop microphone' : 'Ask by voice'}
         </button>
         <span role="status" className="text-xl capitalize text-ink-muted">
-          {state}
+          <StatusBadge state={state} />
           {recording && state !== 'listening' ? ' · microphone on' : ''}
         </span>
       </div>
@@ -238,9 +241,9 @@ export function VoiceClassroom() {
         {transcript || 'Ask about an exercise or a correction.'}
       </div>
       {error && (
-        <p role="alert" className="rounded-xl border border-danger p-5 text-xl text-danger">
+        <StateMessage tone="danger" title="Unable to continue">
           {error}
-        </p>
+        </StateMessage>
       )}
       <details className="rounded-xl border border-line p-5">
         <summary className="cursor-pointer text-xl font-semibold">Type instead</summary>
@@ -278,9 +281,9 @@ export function VoiceClassroom() {
             {result.mode === 'hybrid' ? 'Hybrid retrieval' : 'Full-text retrieval'} · DEMO DATA
           </p>
           {!result.results.length && (
-            <p className="text-2xl">
-              No matching corrections. Try naming an exercise and body part.
-            </p>
+            <StateMessage title="No matching corrections">
+              Try naming an exercise and body part.
+            </StateMessage>
           )}
           {result.results.map(({ correction, exerciseName }) => (
             <article key={correction.id} className="rounded-2xl border border-line bg-panel p-8">
@@ -291,13 +294,12 @@ export function VoiceClassroom() {
               <p className="mt-5 text-2xl leading-relaxed">{correction.correction}</p>
             </article>
           ))}
-          <details className="rounded-xl border border-line p-5">
-            <summary className="cursor-pointer text-lg">Technical details</summary>
+          <TechnicalPanel>
             <p className="mt-4">Normalized: {result.query.normalizedQuery}</p>
             <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
               {Object.entries(result.metrics).map(([key, value]) => (
                 <div key={key}>
-                  <dt>
+                  <dt className="text-ink-muted">
                     {
                       (
                         {
@@ -309,7 +311,9 @@ export function VoiceClassroom() {
                       )[key]
                     }
                   </dt>
-                  <dd>{value === null ? 'Not used' : `${Math.round(value)} ms`}</dd>
+                  <dd className="text-2xl">
+                    {value === null ? 'Not used' : `${Math.round(value)} ms`}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -317,7 +321,7 @@ export function VoiceClassroom() {
               STT delivery measures final transcript arrival after the latest audio chunk; total
               adds retrieval time and excludes speaking duration.
             </p>
-          </details>
+          </TechnicalPanel>
         </div>
       )}
     </section>

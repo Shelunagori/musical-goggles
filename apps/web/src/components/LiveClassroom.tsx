@@ -1,4 +1,7 @@
 'use client';
+import { TechnicalPanel } from './TechnicalPanel';
+import { StatusBadge } from './StatusBadge';
+import { StateMessage } from './StateMessage';
 import { useEffect, useRef, useState } from 'react';
 import { CurriculumResponseSchema, type ExerciseDto } from '@mg/shared';
 import { config } from '@/lib/config';
@@ -105,10 +108,12 @@ export function LiveClassroom() {
         Camera analysis runs locally in your browser.
       </p>
       {catalogLoading && (
-        <p role="status">Loading curriculum detectors… A sleeping API may take up to a minute.</p>
+        <StateMessage title="Loading curriculum…">
+          A sleeping API may take up to a minute.
+        </StateMessage>
       )}
       {catalogError && (
-        <div role="alert" className="text-danger">
+        <StateMessage tone="danger" title="Curriculum unavailable">
           {catalogError}{' '}
           <button
             className="underline"
@@ -120,7 +125,7 @@ export function LiveClassroom() {
           >
             Retry curriculum
           </button>
-        </div>
+        </StateMessage>
       )}
       <div className="flex flex-wrap items-end gap-5">
         <div className="min-w-64 flex-1">
@@ -199,7 +204,7 @@ export function LiveClassroom() {
         role={state === 'error' ? 'alert' : 'status'}
         className={state === 'error' ? 'rounded-xl border border-danger p-5 text-danger' : ''}
       >
-        <p className="text-2xl font-semibold capitalize">{state.replace('_', ' ')}</p>
+        <StatusBadge state={state} />
         {message && <p className="mt-2 text-xl">{message}</p>}
       </div>
       <section
@@ -227,8 +232,7 @@ export function LiveClassroom() {
           </p>
         )}
       </section>
-      <details className="rounded-xl border border-line p-5">
-        <summary className="cursor-pointer text-xl">Technical details</summary>
+      <TechnicalPanel>
         <dl className="mt-4 grid grid-cols-2 gap-5 md:grid-cols-3">
           {[
             [
@@ -274,7 +278,7 @@ export function LiveClassroom() {
           is hidden; start again to recalibrate. No frames are uploaded, stored or logged. Worker
           network policy blocks MediaPipe telemetry.
         </p>
-      </details>
+      </TechnicalPanel>
     </section>
   );
 }

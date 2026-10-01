@@ -1,6 +1,6 @@
 # Architecture — musical-goggles AI Classroom
 
-> Status: **Phase 4 implemented**. Voice/typed retrieval, uploaded-video and live-camera inputs share the taxonomy. Real microphone STT verification needs a key; real webcam capture is blocked by permission in the verification browser; ballet movement validation remains outstanding.
+> Status: **Phase 5 implemented**. Token-protected curriculum CRUD and shared UI navigation/states are available. Voice/typed retrieval, uploaded-video and live-camera inputs share the taxonomy. Real microphone STT verification needs a key; real webcam capture is blocked by permission in the verification browser; ballet movement validation remains outstanding.
 
 ## The one rule
 
@@ -97,7 +97,7 @@ erDiagram
 - An invalid stored detector is served as "not supported" **and** flagged (`detectorIssue`) in the API and UI; it never silently enables detection.
 - The pose engine outputs only a rule id + measurement. Text (error name, cue, correction) always comes from the taxonomy row.
 
-Seeded candidates (Phase 3 must validate on real footage, and revert any unreliable one to `NULL`):
+Seeded candidates (real-movement validation remains outstanding; unreliable checks should revert to `NULL`):
 
 | Exercise     | Error                   | Rule                 |
 | ------------ | ----------------------- | -------------------- |
@@ -148,15 +148,15 @@ One structured JSON line per request: `request_id` (from a safe `x-request-id` h
 
 ## Decisions (and why)
 
-| Decision                                                     | Why                                                                                                                                          |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pg` (node-postgres) over `supabase-js`                      | Hybrid search needs raw SQL (tsvector, pgvector operators, CTEs). One connection string, provider-agnostic.                                  |
-| Extensions in `extensions` schema; SQL schema-qualifies them | Supabase convention; avoids depending on `search_path`, which transaction poolers don't preserve.                                            |
-| `vector(384)` / multilingual-e5-small                        | Local model, no extra API key, multilingual (FR/DE). Trade-off: RAM and cold start on Render free tier — to be measured in Phase 2.          |
-| Search doc built by trigger, not app code                    | Single place builds the retrieval unit; admin edits and SQL edits behave the same.                                                           |
-| `/health` DB-independent + `/health/ready`                   | Render restarts on failed health checks; a DB blip must not kill the API.                                                                    |
-| Curriculum fetched client-side                               | Render free tier cold starts (~30–60 s) would exceed Vercel function limits if fetched during SSR; the browser can show a "waking up" state. |
-| Forward-only SQL migration runner                            | No ORM; same files work with `supabase db push`.                                                                                             |
+| Decision                                                     | Why                                                                                                                                                       |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pg` (node-postgres) over `supabase-js`                      | Hybrid search needs raw SQL (tsvector, pgvector operators, CTEs). One connection string, provider-agnostic.                                               |
+| Extensions in `extensions` schema; SQL schema-qualifies them | Supabase convention; avoids depending on `search_path`, which transaction poolers don't preserve.                                                         |
+| `vector(384)` / multilingual-e5-small                        | Local model, no extra API key, multilingual (FR/DE). Measured ~620 MiB RSS locally in Phase 2; disabled by default pending target-host memory validation. |
+| Search doc built by trigger, not app code                    | Single place builds the retrieval unit; admin edits and SQL edits behave the same.                                                                        |
+| `/health` DB-independent + `/health/ready`                   | Render restarts on failed health checks; a DB blip must not kill the API.                                                                                 |
+| Curriculum fetched client-side                               | Render free tier cold starts (~30–60 s) would exceed Vercel function limits if fetched during SSR; the browser can show a "waking up" state.              |
+| Forward-only SQL migration runner                            | No ORM; same files work with `supabase db push`.                                                                                                          |
 
 ## Phase 2 protocol and runtime
 
@@ -183,7 +183,7 @@ No schema changes were required. See [verification and memory observations](phas
 
 The `/video` client loads the existing `GET /curriculum`, filters corrections through the pose engine's supported-rule registry, and lets the user select exercise context. It passes only correction IDs and detector configurations to the engine. Correction names, cues and instructions always come from the same DTOs served to voice retrieval. No CV database or new API route is needed.
 
-`video-analysis.ts` seeks a local blob-backed player at 100 ms media-time intervals, waits for decoded frames, resizes input to at most 960 pixels on its longest edge, and transfers one `ImageBitmap` at a time to `pose.worker.ts`. MediaPipe Tasks Vision 1.0.1 runs `PoseLandmarker.detectForVideo` in VIDEO mode with the version-1 Lite float16 model and CPU delegate. Inference stays off the main thread. The worker also owns the input-independent `PosePipeline`; The Phase 4 webcam source uses this same worker without changing detectors or event filtering.
+`video-analysis.ts` seeks a local blob-backed player at 100 ms media-time intervals, waits for decoded frames, resizes input to at most 960 pixels on its longest edge, and transfers one `ImageBitmap` at a time to `pose.worker.ts`. MediaPipe Tasks Vision 1.0.1 runs `PoseLandmarker.detectForVideo` in VIDEO mode with the version-1 Lite float16 model and CPU delegate. Inference stays off the main thread. The worker also owns the input-independent `PosePipeline`; the Phase 4 webcam source uses this same worker without changing detectors or event filtering.
 
 MediaPipe image x/y coordinates are corrected for aspect ratio before torso normalization. Pure rule functions return side, rule, status, normalized measurement, minimum visibility and relevant landmark indices. Visibility is a tracking-quality measure, not a correction confidence score. Empty or multi-person frames produce unmeasurable results. A fixed frontal view is required.
 
@@ -206,3 +206,22 @@ A recursive timer targets 100 ms wall-clock intervals and skips missed slots ins
 Only temporal events with an open interval generate current correction cards. IDs are deduplicated across left/right and resolved against the selected exercise's live curriculum DTOs. Raw per-frame violations never generate cards. Unsupported checks remain unavailable; absent/low-confidence poses do not claim correct technique.
 
 The unchanged worker response CSP blocks MediaPipe telemetry destinations and permits pinned model assets. No backend routes, database schema, voice/retrieval logic or dependencies were added for Phase 4. See [Phase 4 verification](phase4-verification.md).
+
+## Phase 5 curriculum management
+
+The browser admin screen uses the existing Fastify API and PostgreSQL taxonomy. `@mg/shared` exports strict exercise/correction input schemas, reusing `DetectorSchema`. Editable fields are explicitly enumerated; embedding, searchable text, tsvector, IDs and timestamps cannot be submitted. There is no new database schema or RLS change.
+
+| Method | Route                              | Behavior                                                             |
+| ------ | ---------------------------------- | -------------------------------------------------------------------- |
+| GET    | `/admin/status`                    | Verify the admin token; no-store response                            |
+| POST   | `/admin/exercises`                 | Create an exercise and aliases atomically; 201 + ID                  |
+| PUT    | `/admin/exercises/:id`             | Replace editable exercise fields and sync aliases; 200 + ID          |
+| POST   | `/admin/exercises/:id/corrections` | Create a correction in that exercise; 201 + ID                       |
+| PUT    | `/admin/corrections/:id`           | Replace editable correction fields, preserving ID/exercise; 200 + ID |
+| DELETE | `/admin/corrections/:id`           | Delete the correction; 200 + ID, subsequent deletion 404             |
+
+Every admin route requires `Authorization: Bearer <ADMIN_API_TOKEN>`. The server compares token digests in constant time. Missing configuration disables the routes with 503 `ADMIN_DISABLED`; missing/wrong authorization returns 401 `UNAUTHORIZED`. The token is never a public env value or stored in browser persistence, and existing logging redacts Authorization. Admin supports one trusted operator; per-user accounts, audit history and concurrent edit conflict resolution are not implemented.
+
+Writes use parameterized raw SQL and a checked-out client transaction. Alias synchronization is incremental so saving unchanged aliases does not transiently delete terms and invalidate vectors. Existing triggers maintain search documents and embeddings. Constraint conflicts return 409, malformed/invalid inputs 400, absent records/parents 404. Responses never expose vectors. Ambiguous network failures tell the user to reload before retrying; writes are not retried automatically.
+
+UI primitives now share navigation, status colors, failure/loading/empty messages and technical-panel presentation. Camera badges distinguish implemented prototypes from metadata-only checks, without changing the API's metadata coverage semantics. Voice transport, ranking, embedding providers and pose-engine behavior remain unchanged. See [Phase 5 verification](phase5-verification.md).

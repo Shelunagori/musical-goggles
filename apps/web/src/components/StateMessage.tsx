@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 const TONES = {
   info: 'border-line text-ink-muted',
+  success: 'border-ok/50 text-ok',
   warn: 'border-warn/50 text-warn',
   danger: 'border-danger/50 text-danger',
 } as const;
@@ -16,7 +17,7 @@ export function StateMessage(props: {
   return (
     <div
       role={props.tone === 'danger' ? 'alert' : 'status'}
-      className={`rounded-2xl border bg-panel p-8 ${tone}`}
+      className={`rounded-2xl border bg-panel p-5 sm:p-6 ${tone}`}
     >
       <p className="text-2xl font-semibold">{props.title}</p>
       {props.children ? <div className="mt-3 text-lg text-ink-muted">{props.children}</div> : null}
