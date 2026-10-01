@@ -8,6 +8,7 @@ export default defineConfig({
     migrate: 'scripts/migrate.ts',
     seed: 'scripts/seed.ts',
     embed: 'scripts/embed.ts',
+    'verify-db': 'scripts/verify-db.ts',
   },
   format: ['esm'],
   platform: 'node',

@@ -1,4 +1,8 @@
 import type { NextConfig } from 'next';
+import { apiUrl } from './src/lib/api-url';
+
+// Fail at build time, before a misconfigured public URL is baked into browser chunks.
+if (process.env.VERCEL === '1') apiUrl(process.env.NEXT_PUBLIC_API_URL, true);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

@@ -79,6 +79,10 @@ export class PgCurriculumRepository implements CurriculumRepository {
   }
 
   async ping(): Promise<void> {
-    await this.db.query('select 1');
+    // Resolve required tables/columns and permissions even when the catalog is empty.
+    await this.db.query(`select e.id, a.alias, c.search_tsv, c.embedding, c.detector
+      from public.exercises e
+      left join public.exercise_aliases a on a.exercise_id=e.id
+      left join public.corrections c on c.exercise_id=e.id limit 0`);
   }
 }

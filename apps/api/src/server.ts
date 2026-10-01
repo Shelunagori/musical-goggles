@@ -49,10 +49,13 @@ async function main(): Promise<void> {
   process.once('SIGINT', () => void shutdown('SIGINT'));
 
   await app.listen({ host: env.HOST, port: env.PORT });
-  logger.info({ phase2: { deepgram: Boolean(env.DEEPGRAM_API_KEY) } }, 'api ready');
+  logger.info(
+    { deepgram: Boolean(env.DEEPGRAM_API_KEY), embeddings_enabled: env.EMBEDDING_ENABLED },
+    'api ready',
+  );
 }
 
-main().catch((err: unknown) => {
-  console.error('fatal startup error', err);
+main().catch(() => {
+  console.error('Fatal startup error. Check API environment configuration and port availability.');
   process.exit(1);
 });

@@ -23,7 +23,18 @@ export async function voiceRoutes(
     const parsed = SearchRequestSchema.safeParse(request.body);
     if (!parsed.success)
       throw new AppError('BAD_REQUEST', 'Query must contain 1–1000 characters.', 400);
-    return search.search(parsed.data.query);
+    const data = await search.search(parsed.data.query);
+    request.log.info(
+      {
+        search_mode: data.mode,
+        search_ms: data.metrics.searchMs,
+        normalization_ms: data.metrics.normalizationMs,
+        total_ms: data.metrics.totalMs,
+        result_count: data.results.length,
+      },
+      'typed retrieval completed',
+    );
+    return data;
   });
   app.get(
     '/voice',

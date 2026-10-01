@@ -59,10 +59,22 @@ export function parseEnv(source: NodeJS.ProcessEnv | Record<string, string | und
   const cleaned = Object.fromEntries(
     Object.entries(source).filter(([, v]) => v !== undefined && v !== ''),
   );
+  if (cleaned.NODE_ENV === 'production' && !cleaned.CORS_ORIGINS?.trim())
+    throw new EnvError('CORS_ORIGINS must explicitly name the frontend origin in production.');
   const result = EnvSchema.safeParse(cleaned);
   if (!result.success) {
     const lines = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`);
     throw new EnvError(`Invalid environment configuration:\n${lines.join('\n')}`);
+  }
+  for (const origin of result.data.CORS_ORIGINS) {
+    try {
+      const url = new URL(origin);
+      if (!['http:', 'https:'].includes(url.protocol) || url.origin !== origin) throw new Error();
+    } catch {
+      throw new EnvError(
+        'CORS_ORIGINS must contain exact HTTP(S) origins, without paths or wildcards.',
+      );
+    }
   }
   return result.data;
 }

@@ -34,6 +34,19 @@ export function buildLoggerOptions(level: string, pretty: boolean): FastifyServe
     level,
     // Never log bodies (Phase 2 audio) or credentials.
     redact: ['req.headers.authorization', 'req.headers.cookie', 'req.headers["x-api-key"]'],
+    // Database errors can include row values, credentials or connection strings.
+    serializers: {
+      err: (error: unknown) => ({
+        type: 'Error',
+        message: 'Error details omitted; correlate the safe code with the request ID.',
+        stack: '',
+        code:
+          typeof (error as { code?: unknown })?.code === 'string' &&
+          /^[A-Z0-9_]{2,40}$/.test((error as { code: string }).code)
+            ? (error as { code: string }).code
+            : 'UNCLASSIFIED',
+      }),
+    },
     ...(pretty
       ? { transport: { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss.l' } } }
       : {}),

@@ -2,6 +2,10 @@
 
 > Status: **Phase 5 implemented**. Token-protected curriculum CRUD and shared UI navigation/states are available. Voice/typed retrieval, uploaded-video and live-camera inputs share the taxonomy. Real microphone STT verification needs a key; real webcam capture is blocked by permission in the verification browser; ballet movement validation remains outstanding.
 
+## Deployment preparation (Phase 6)
+
+The architecture remains unchanged. Initial Render configuration disables local E5 and uses real PostgreSQL FTS; the API response reports the actual search mode. Production frontend builds validate the public API origin, API production startup requires explicit origins, readiness resolves curriculum tables/columns, and logs retain safe codes/timings rather than raw database errors. A read-only `db:verify` command checks database deployment prerequisites. See [deployment steps](deployment.md) and [observed verification](phase6-verification.md); public hosting is not yet verified.
+
 ## The one rule
 
 There is **one** correction taxonomy. Voice retrieval, uploaded-video analysis and live-camera analysis all resolve to the **same `corrections` rows**. No input mode carries its own copy of correction text.

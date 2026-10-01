@@ -43,7 +43,7 @@ Local Postgres alternative (Docker): `docker run -d -p 5432:5432 -e POSTGRES_PAS
 
 1. Create a project. Extensions `vector` and `unaccent` are created by the migration (in the `extensions` schema).
 2. **Project Settings → Database → Connection string → Session pooler** (IPv4, port 5432). Put it in `apps/api/.env` as `DATABASE_URL`.
-3. `pnpm db:migrate && pnpm db:seed` from your machine. (Or `supabase db push` — migration filenames follow the Supabase CLI convention.)
+3. `pnpm db:migrate && pnpm db:seed` from your machine. Use this runner consistently; do not mix its migration ledger with `supabase db push`.
 4. TLS is automatic for non-local hosts. Optionally set `DATABASE_SSL_CA` to the project CA to verify the certificate.
 5. RLS is enabled with no policies: the anon key can read nothing. Only the API (server credentials) reads the DB.
 
@@ -123,10 +123,13 @@ Navigation connects all modes and admin. Tab/Shift+Tab, Enter/Space, visible foc
 
 ## Deployment (Phase 6)
 
-- **Web → Vercel:** root directory `apps/web`, env `NEXT_PUBLIC_API_URL=https://<api>.onrender.com`.
-- **API → Render (free web service):** build `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @mg/api build`, start `node apps/api/dist/server.js`, health check `/health`, env `DATABASE_URL`, `CORS_ORIGINS=https://<web>.vercel.app`, `NODE_ENV=production`. Migrations: `node apps/api/dist/migrate.js`.
-- **DB → Supabase**, **pose → browser**, **STT → Deepgram**. No Redis/queues/K8s.
-- Render free instances sleep; the first request can take ~30–60 s. The UI shows a "waking up" state rather than failing.
+Deployment preparation is available; **no live URLs or deployed search mode have been verified yet**. Follow the [deployment runbook](docs/deployment.md) for Supabase migrations/seed, Render free configuration, Vercel setup, every environment variable and the demo acceptance sequence. See [Phase 6 evidence and remaining actions](docs/phase6-verification.md).
+
+The initial demo configuration is **FTS-only**. Local E5 remains disabled on Render free because the measured ~620 MiB RSS exceeds its documented 512 MB allocation. No hosted embedding provider is currently configured. The response/UI reports the actual retrieval mode.
+
+`render.yaml` keeps workspace build/start settings together and explicitly selects the free plan. Supply real secrets only in the API environment. `NEXT_PUBLIC_API_URL` is the sole frontend setting and must be provided at production build time. For a local production build: `NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm build`.
+
+Render cold starts may take about a minute. Warm the API via curriculum/typed search before a voice demonstration; voice has a shorter connection timeout and provides retry/typed fallback. Public microphone, webcam, MediaPipe/CSP and latency checks remain pending until actual HTTPS URLs are available.
 
 ## Known computer-vision limitations
 
@@ -146,4 +149,4 @@ Single-camera 2D landmarks cannot reliably judge hip turnout, rotation, weight p
 3. ✅ Uploaded video + browser MediaPipe + deterministic detectors and event intervals (real ballet validation outstanding)
 4. ✅ Live webcam on the same pose engine (actual webcam verification blocked by camera permission)
 5. ✅ Curriculum admin + UI polish + consistent technical panels
-6. Vercel + Render + Supabase deployment, end-to-end verification
+6. Deployment configuration/runbook prepared; public deployment and end-to-end verification pending target access

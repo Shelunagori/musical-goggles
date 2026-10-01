@@ -21,7 +21,8 @@
     "db:seed": "pnpm --filter @mg/api db:seed",
     "db:reset": "pnpm --filter @mg/api db:reset",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build",
-    "db:embed": "pnpm --filter @mg/api db:embed"
+    "db:embed": "pnpm --filter @mg/api db:embed",
+    "db:verify": "pnpm --filter @mg/api db:verify"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

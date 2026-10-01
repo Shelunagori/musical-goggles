@@ -32,6 +32,15 @@ describe('parseEnv', () => {
     expect(env.CORS_ORIGINS).toEqual(['https://a.vercel.app', 'http://localhost:3000']);
     expect(env.PORT).toBe(10000);
   });
+  it('requires production origins and rejects wildcard/path/credential configuration', () => {
+    expect(() => parseEnv({ ...base, NODE_ENV: 'production' })).toThrow('CORS_ORIGINS');
+    for (const CORS_ORIGINS of ['*', 'https://site.example/path', 'https://u:p@site.example'])
+      expect(() => parseEnv({ ...base, CORS_ORIGINS })).toThrow('exact HTTP(S) origins');
+    expect(
+      parseEnv({ ...base, NODE_ENV: 'production', CORS_ORIGINS: 'https://site.example' })
+        .CORS_ORIGINS,
+    ).toEqual(['https://site.example']);
+  });
 });
 
 describe('classifyDatabaseError', () => {
