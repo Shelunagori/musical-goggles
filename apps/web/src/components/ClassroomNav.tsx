@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { BackendStatus } from './BackendStatus';
 const links = [
   ['/', 'Classroom'],
   ['/voice', 'Voice'],
@@ -42,6 +43,9 @@ export function ClassroomNav() {
             </Link>
           ))}
         </nav>
+      </div>
+      <div className="mx-auto max-w-[1440px] px-5 pb-3 sm:px-8 lg:px-12">
+        <BackendStatus />
       </div>
     </header>
   );

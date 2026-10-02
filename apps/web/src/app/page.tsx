@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { BackendStatus } from '@/components/BackendStatus';
 import { ArrowIcon, CameraIcon, FilmIcon, MicIcon, BookIcon } from '@/components/icons';
 const modes = [
   {
@@ -134,7 +133,6 @@ export default function ClassroomHome() {
       </section>
       <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-line/70 pt-5 text-xs text-ink-faint">
         <p>Video & camera stay on your device. Voice uses Deepgram.</p>
-        <BackendStatus />
       </footer>
     </main>
   );
